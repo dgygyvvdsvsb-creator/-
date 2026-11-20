@@ -103,6 +103,9 @@ def draw_banner(img, ep=3):
         d.text((xx, y), txt, font=f, fill=col, stroke_width=3, stroke_fill=C_STROKE)
 
 
+WRAP = 560
+
+
 def draw_caption(img, words, t):
     """words: list of (text, start, colour). Karaoke: dim until spoken."""
     if not words:
@@ -114,7 +117,7 @@ def draw_caption(img, words, t):
     lines, cur, cw = [], [], 0
     for w in words:
         ww = d.textlength(w[0], font=f)
-        if cur and cw + sp + ww > 560:
+        if cur and cw + sp + ww > WRAP:
             lines.append(cur)
             cur, cw = [], 0
         cw = cw + (sp if cur else 0) + ww

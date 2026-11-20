@@ -40,6 +40,19 @@ for at in (61.05,61.15):
 # fade out last 0.6 s
 out[-int(0.6*sr):]*=np.linspace(1,0,int(0.6*sr))
 full=np.concatenate([x[:int(T0*sr)],out])
+# ---- hook SFX layered over the original first 3.5 s
+def add(at,sig):
+    i=int(at*sr);full[i:i+len(sig)]+=sig[:max(0,len(full)-i)]
+tt=np.arange(int(0.7*sr))/sr
+boom=0.55*np.sin(2*np.pi*(90*np.exp(-tt*3))*tt)*np.exp(-tt*5)          # impact at frame 0
+crack=0.25*rng.standard_normal(len(tt))*np.exp(-tt*40)
+add(0.0,boom+crack)
+for at in (0.55,1.10,2.20,2.53,2.86,3.20):                             # whoosh on every cut
+    m=int(0.22*sr);w=np.convolve(rng.standard_normal(m),np.ones(8)/8,"same")
+    add(at-0.06,0.10*w*np.sin(np.linspace(0,np.pi,m))**2)
+tt=np.arange(int(0.5*sr))/sr
+add(1.55,0.45*np.sin(2*np.pi*(120*np.exp(-tt*6))*tt)*np.exp(-tt*8)+0.2*rng.standard_normal(len(tt))*np.exp(-tt*30))  # kick
+
 # blend rain in under the last 0.5 s of the original so the seam is invisible
 a=int((T0-0.5)*sr);b=int(T0*sr)
 r2=rain[:b-a]*np.linspace(0,1,b-a);full[a:b]+=r2
