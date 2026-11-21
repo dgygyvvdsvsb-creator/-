@@ -618,3 +618,27 @@ def score_bar(img, y, left, right, score, minute=None, k=1.0):
     if minute:
         d.rounded_rectangle([FW / 2 - 50, y + 62, FW / 2 + 50, y + 96], 8, fill=(210, 52, 56))
         d.text((FW / 2, y + 79), minute, font=font(800, 22), fill=(255, 255, 255), anchor="mm")
+
+
+def draw_ball(img, cx, by, size):
+    """smooth round football at full resolution (anti-aliased), bottom-centre anchored like paste()"""
+    r = size * 6.5
+    S = 4
+    n = int(r * 2 + 12)
+    lay = Image.new("RGBA", (n * S, n * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    c = n * S / 2
+    R_ = r * S
+    d.ellipse([c - R_ - 3 * S, c - R_ - 3 * S, c + R_ + 3 * S, c + R_ + 3 * S], fill=OL)
+    d.ellipse([c - R_, c - R_, c + R_, c + R_], fill=(250, 250, 250))
+    d.regular_polygon((c, c, R_ * 0.33), 5, rotation=0, fill=OL)
+    for k in range(5):
+        a = -math.pi / 2 + k * math.tau / 5
+        px, py = c + math.cos(a) * R_ * 0.82, c + math.sin(a) * R_ * 0.82
+        d.regular_polygon((px, py, R_ * 0.22), 5, rotation=180, fill=(50, 50, 60))
+    d.ellipse([c - R_ * 0.6, c - R_ * 0.7, c - R_ * 0.25, c - R_ * 0.4], fill=(255, 255, 255))
+    mask = Image.new("L", lay.size, 0)
+    ImageDraw.Draw(mask).ellipse([c - R_ - 3 * S, c - R_ - 3 * S, c + R_ + 3 * S, c + R_ + 3 * S], fill=255)
+    lay.putalpha(Image.composite(lay.split()[3], Image.new("L", lay.size, 0), mask))
+    lay = lay.resize((n, n), Image.LANCZOS)
+    img.alpha_composite(lay, (int(cx - n / 2), int(by - n / 2 - r)))

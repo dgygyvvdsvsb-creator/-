@@ -95,6 +95,10 @@ def overlay(img, t):
     caption(img, cur, t, size=56, wrap=620)
 
 
+def draw_ball_s(img, x, y, size=6):
+    draw_ball(img, x, y, size)
+
+
 # ------------------------------------------------------------------ sets
 def pitch_set(key="pitch", rainy=True):
     if key not in BG:
@@ -150,23 +154,23 @@ def window(img, x, y, w, h, night=False, t=0):
 def s01(t, u, T):
     """hook: keeper flying flat, arms out — the ball squirms between the oversized gloves"""
     img = pitch_set()
-    goal(img, 360, 900, 680, 380)
+    goal(img, 360, 900, 600, 300)
     speed_lines(img, t, 330, 690, n=12, a=70, r0=330, r1=700)   # behind the action
     # keeper: arms-up sprite turned exactly 90 degrees -> clean horizontal dive to the right
-    kx = lerp(300, 380, ease_out(u * 1.3))
-    ky = 760 - math.sin(clamp(u * 1.2) * math.pi) * 30
-    sp = big(hero(pose="reach", gloves=True, mouth="open"), 12).rotate(-90, expand=True, resample=Image.NEAREST)
-    shadow(img, kx, 1000, 380, 40, 70)
+    kx = lerp(320, 380, ease_out(u * 1.3))
+    ky = 740 - math.sin(clamp(u * 1.2) * math.pi) * 25
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), 8).rotate(-90, expand=True, resample=Image.NEAREST)
+    shadow(img, kx, 900, 300, 34, 70)
     img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
-    gx = kx + sp.width / 2 - 70           # gloves (front end of the body)
+    gx = kx + sp.width / 2 - 47           # gloves (front end of the body)
     # ball: arrives at the gloves at frame 0, slips through and on into the net
     bu = ease_in_out(clamp(u / 0.55))
-    bx = min(640, gx + 30 + 70 * bu)
-    by = ky + 6 + 110 * bu
+    bx = min(640, gx + 25 + 60 * bu)
+    by = ky + 4 + 100 * bu
     if u < 0.12:
-        glow_ring(img, gx + 30, ky + 6, 80, 0.5, (255, 250, 210))
-    paste(img, ball_sprite(), 6, bx, by + 35)
-    impact_lines(img, gx + 30, ky + 20, T - 0.05, t, 12)
+        glow_ring(img, gx + 25, ky + 4, 70, 0.5, (255, 250, 210))
+    draw_ball_s(img, bx, by + 35, 5)
+    impact_lines(img, gx + 25, ky + 15, T - 0.05, t, 12)
     if u > 0.5:
         impact_lines(img, bx, by, T + 0.5 * LINES[0][1], t, 10)
     pill(img, 360, 1180, "YOU CHOSE: ACADEMY", (40, 150, 80), 1.0, 30)
@@ -317,16 +321,18 @@ def s07(t, u, T):
 
 def s08(t, u, T):
     img = pitch_set()
-    goal(img, 360, 820, 600, 300)
-    # Dixon catches cleanly, chest height
+    GL = 1060
+    goal(img, 360, GL, 640, 330)
+    # Dixon on his goal line catches cleanly, chest height
     caught = u > 0.4
-    sp_d = paste(img, dixon(pose="catch" if caught else "ready"), 14, 360, 1180)
+    shadow(img, 360, GL, 200)
+    sp_d = paste(img, dixon(pose="catch" if u > 0.34 else "ready"), 9, 360, GL)
     k = clamp(u / 0.4)
-    gy = 1180 - sp_d.height + (10 + 13) * 14
-    bx, by = lerp(720, 366, k), lerp(500, gy + 30, k)
-    paste(img, ball_sprite(), 6, bx, by)
+    gy = GL - sp_d.height + (10 + 13) * 9
+    bx, by = lerp(800, 366, k), lerp(500, gy + 30, k)
+    draw_ball_s(img, bx, by)
     if u > 0.4:
-        glow_ring(img, 366, gy - 10, 80, 0.7)
+        glow_ring(img, 366, gy - 10, 70, 0.7)
     pill(img, 360, 1230, "DIXON · 0 MISTAKES", (40, 90, 200), spring(t - T - 0.3, 13, 7), 28)
     return cam(img, 1 + 0.05 * u, 360, 900)
 
@@ -342,37 +348,48 @@ def s09(t, u, T):
 def s10(t, u, T):
     """try-fail montage: balls fly past, counters"""
     img = pitch_set()
-    goal(img, 360, 900, 620, 320)
+    GL = 1040
+    goal(img, 360, GL, 600, 300)
     ws = word_times(9)
     sw = clamp((ws[6][1] - 0.04 - T) / LINES[9][1] + 0.005)      # caption "DAY THREE" starts here
     if u < sw:
         shot, phase = int(u / (sw / 2)), (u % (sw / 2)) / (sw / 2)
     else:
         v = (u - sw) / (1 - sw)
-        shot, phase = 2 + int(v * 2), (v * 2) % 1
+        shot, phase = (2, v / 0.38) if v < 0.38 else (3, (v - 0.38) / 0.62)
     shot = min(shot, 3)
-    side = 1 if shot % 2 else -1
-    kx = 360 + side * 140 * ease_out(phase)
-    if phase > 0.3:
-        sp = big(hero(pose="reach", gloves=True, mouth="open"), 9).rotate(-90 if side > 0 else 90, expand=True, resample=Image.NEAREST)
-        ky = 860 - math.sin(clamp(phase) * math.pi) * 40
-        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
-    else:
-        paste(img, hero(pose="ready", gloves=True), 11, kx, 1000)
-    bk = clamp(phase / 0.8)
+    side = [-1, 1, 1, -1][shot]
+    save = shot == 2                      # Day 3, first shot: you finally stop one
+    dive_side = -side if save else side   # wrong way on the goals, right way on the save
+    kx = 360 + dive_side * 150 * ease_out(phase)
+    bk = clamp(phase / 0.55)
     bx = lerp(360 - side * 40, 360 - side * 230, bk)
-    by = lerp(1380, 760, ease_out(bk))
-    paste(img, ball_sprite(), 6, bx, by)
-    if bk >= 1:
-        impact_lines(img, bx, by - 40, t - (phase - 0.8) * 0.5, t, 10)
+    by = lerp(1380, GL - (250 if shot == 3 else 190), bk)
+    if save and bk >= 1:
+        bx, by = kx - side * 0 + (-side) * (-1) * 0 + (360 - side * 230 - kx) * 0.0 + (kx - 360) * 0.0 + (-(dive_side) * 0) + (kx + dive_side * 150 - kx), GL - 200
+    shadow(img, kx, GL, 200)
+    if phase > 0.3:
+        sp = big(hero(pose="reach", gloves=True, mouth="open"), 8).rotate(-90 if dive_side > 0 else 90, expand=True, resample=Image.NEAREST)
+        ky = GL - 170 - math.sin(clamp(phase) * math.pi) * 40
+        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
+        if save:
+            bx, by = (kx + dive_side * (sp.width / 2 - 40), ky + 30) if bk >= 0.85 else (bx, by)
+    else:
+        paste(img, hero(pose="ready", gloves=True), 8, kx, GL)
+    draw_ball_s(img, bx, by, 6)
+    if bk >= 1 and not save:
+        impact_lines(img, bx, by - 40, t - (phase - 0.55) * 0.5, t, 10)
+    if save and bk >= 0.85:
+        glow_ring(img, bx, by - 40, 80, 0.8, (255, 255, 200))
+        pill(img, 360, 520, "SAVE!", (40, 150, 80), spring(t - (T + (sw + (1 - sw) * 0.85 * 0.5 * 0.8) * LINES[9][1]), 13, 7), 40)
     day2 = u < sw
-    scored = bk >= 1
-    n = [[0, 4], [4, 9], [0, 3], [3, 7]][shot][1 if scored else 0]
+    scored = bk >= 1 and not save
+    n = [[7, 8], [8, 9], [6, 6], [6, 7]][shot][1 if scored else 0]
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([200, 1100, 520, 1230], 18, fill=(16, 18, 36), outline=C_R, width=5)
     d.text((360, 1135), "DAY 2" if day2 else "DAY 3", font=font(800, 28), fill=(255, 255, 255), anchor="mm")
     d.text((360, 1192), f"CONCEDED {n}", font=font(800, 36), fill=C_R, anchor="mm")
-    img = flash(img, 0.18 * clamp(1 - abs(phase - 0.9) * 12), (255, 60, 60))
+    img = flash(img, 0.18 * clamp(1 - abs(phase - 0.9) * 12), (60, 255, 120) if save else (255, 60, 60))
     return cam(img, 1 + 0.03 * u, 360, 900)
 
 
@@ -383,7 +400,7 @@ def s11(t, u, T):
     """day four: Mason's penalty — keeper's view, Mason runs up"""
     img = pitch_set()
     paste(img, mason(pose="run" if u > 0.3 else "stand", phase=t * 2.5, mouth="smile"), 9, 360, lerp(760, 820, u))
-    paste(img, ball_sprite(), 3, 380, 840)
+    draw_ball_s(img, 380, 840)
     paste(img, hero(view="back", pose="ready", gloves=True), 22, 330, 1600)
     pill(img, 600, 560, "DAY 4", (60, 60, 80), spring(t - T, 13, 7), 30)
     d = ImageDraw.Draw(img, "RGBA")
@@ -393,16 +410,16 @@ def s11(t, u, T):
 
 def s12(t, u, T):
     img = pitch_set()
-    goal(img, 360, 860, 640, 330)
+    goal(img, 360, 860, 600, 300)
     speed_lines(img, t, 250, 700, n=18, a=90, r0=300, r1=700)
-    sp = big(hero(pose="reach", gloves=True, mouth="open"), 11).rotate(90, expand=True, resample=Image.NEAREST)
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), 8).rotate(90, expand=True, resample=Image.NEAREST)
     kx = lerp(430, 380, ease_out(u * 2))
     ky = 700 - math.sin(clamp(u * 1.5) * math.pi) * 20
-    shadow(img, kx, 880, 380, 36, 70)
+    shadow(img, kx, 860, 300, 34, 70)
     img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
-    gx = kx - sp.width / 2 + 75
-    glow_ring(img, gx - 60, ky, 90 + 40 * u, 0.9, (255, 255, 200))
-    paste(img, ball_sprite(), 6, gx - 60, ky + 40)
+    gx = kx - sp.width / 2 + 55
+    glow_ring(img, gx - 45, ky, 80 + 30 * u, 0.9, (255, 255, 200))
+    draw_ball_s(img, gx - 45, ky + 36, 5)
     pill(img, 360, 1150, "SAVED!", (40, 150, 80), spring(t - T - 0.05, 13, 7), 48)
     paste(img, coach(look=-1), 6, 620, 1250)
     img = flash(img, 0.7 * clamp(1 - u * 5))
@@ -498,27 +515,27 @@ def s15(t, u, T):
 def s16(t, u, T):
     """Friday: Okafor jumps for a cross and lands wrong"""
     img = pitch_set()
-    goal(img, 360, 820, 600, 300)
+    G = 1060
+    goal(img, 360, G, 600, 300)
     pill(img, 130, 470, "FRIDAY", (60, 60, 80), spring(t - T, 13, 7), 30)
-    G = 1110
     if u < 0.3:
         k = u / 0.3
-        y = G - math.sin(k * math.pi) * 260
-        shadow(img, 360, G, 220 * (1 - 0.4 * math.sin(k * math.pi)))
-        paste(img, okafor(pose="celebrate"), 12, 360, y)
-        paste(img, ball_sprite(), 5, lerp(720, 380, k), lerp(560, y - 470, k))
+        y = G - math.sin(k * math.pi) * 150
+        shadow(img, 360, G, 180 * (1 - 0.4 * math.sin(k * math.pi)))
+        paste(img, okafor(pose="celebrate"), 8, 360, y)
+        draw_ball_s(img, lerp(780, 380, k), lerp(560, y - 300, k), 5)
     elif u < 0.38:  # bad landing: knee buckles
-        shadow(img, 360, G, 220)
-        paste(img, okafor(pose="stand", mouth="open"), 12, 380, G, rot=-18)
-        paste(img, ball_sprite(), 5, 470, G - 10)
+        shadow(img, 360, G, 180)
+        paste(img, okafor(pose="stand", mouth="open"), 8, 380, G, rot=-18)
+        draw_ball_s(img, 450, G - 10, 5)
     else:
         rock = math.sin(t * 7) * 4
-        shadow(img, 360, G, 260)
-        paste(img, okafor(pose="hurt", blink=int(t * 3) % 3 == 0, mouth="open"), 12, 330, G + 60 + rock * 0.5, rot=-90)
+        shadow(img, 360, G, 220)
+        paste(img, okafor(pose="hurt", blink=int(t * 3) % 3 == 0, mouth="open"), 8, 340, G + 40 + rock * 0.4, rot=-90)
         bk = clamp((u - 0.38) / 0.5)
-        paste(img, ball_sprite(), 5, lerp(470, 700, ease_out(bk)), G - 10)
+        draw_ball_s(img, lerp(450, 620, ease_out(bk)), G - 10, 5)
         if int(t * 6) % 2:
-            glow_ring(img, 300, G - 60, 55, 0.7, (255, 60, 60))
+            glow_ring(img, 320, G - 40, 45, 0.7, (255, 60, 60))
         if u < 0.55:
             impact_lines(img, 360, G - 100, T + 0.3 * LINES[15][1], t, 12)
         pill(img, 360, 1210, "INJURED", (200, 40, 50), spring(t - T - 0.45 * LINES[15][1], 13, 7), 30)

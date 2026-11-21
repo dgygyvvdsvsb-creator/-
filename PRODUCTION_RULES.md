@@ -35,3 +35,9 @@ Reference: remi_sport "De zéro à champion du monde" EP7 (85 s).
 - Ending: life choice with risk, two cards + typing box, "vote in the comments", FOLLOW / SUBSCRIBE card.
 - Our anchors stay: hero green #0 + red bracelet (right wrist) + Grandad's orange gloves; Grandad bald, white
   side hair, glasses, white beard, brown cardigan, cane; Mason blond spiky, red #9; banner "EP. N · FROM ZERO TO LEGEND".
+
+## QA (user decision, saves tokens)
+- Exactly ONE reviewer agent per episode, launched only after the full render.
+  It does both jobs in one pass: frame-by-frame visuals (anatomy, scale, physics, round ball, keepers on the goal line,
+  caption vs picture) AND story/continuity logic. Fix everything it finds, then at most one short re-check by the same agent.
+- Goals are youth-size: height ≈ 1.2 × keeper height, width ≈ 2 × goal height. Show a small keeper by making HIM smaller, never the goal bigger.
