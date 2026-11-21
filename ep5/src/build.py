@@ -501,7 +501,7 @@ def s14(t, u, T):
 
 def s15(t, u, T):
     img = home_call(t, u, "open" if int(t * 7) % 2 else "smile", ui=u < 0.45)
-    bubble(img, 330, 560, "I'LL BE THERE.\nSEAT 14.", spring(t - T - 0.8, 13, 7), 32)
+    bubble(img, 380, 768, "I'LL BE THERE.\nSEAT 14.", spring(t - T - 0.8, 13, 7), 32)
     if u > 0.6:  # ticket
         k = spring(t - T - 0.6 * LINES[14][1], 13, 7)
         d = ImageDraw.Draw(img)
