@@ -263,7 +263,7 @@ def s05(t, u, T):
     paste(img, hero(mouth="smile", bracelet=True, look=-1), 9, 580, 1080)
     turned = u > 0.35
     in_bed(img, dixon(view="back" if turned else "front", look=1, gloves=False), 58, 486, 5, (60, 110, 200))
-    bubble(img, 650, 660, "HI!", spring(t - T - 0.1, 13, 7), 36)
+    bubble(img, 600, 785, "HI!", spring(t - T - 0.1, 13, 7), 36)
     if u > 0.62:
         pill(img, 200, 600, "DIXON · KEEPER #2", (40, 90, 200), spring(t - T - 0.62 * LINES[4][1], 13, 7), 26)
     return cam(img, 1.03 + 0.05 * u, 360, 760) if u < 0.35 else cam(img, 1.6 + 0.08 * u, 0, 450)
