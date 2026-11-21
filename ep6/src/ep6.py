@@ -215,10 +215,11 @@ def desk_and_coach(img, t, look=0, talk=False, blink=False):
     d.rectangle([200, 782, 290, 804], fill=(250, 246, 236), outline=OL, width=3)   # papers
     # his cap on the desk, head-sized: crown dome + brim pointing at us
     NAVY, NAVY_D = (34, 46, 96), (22, 30, 66)
-    d.chord([50, 736, 180, 832], 180, 360, fill=NAVY, outline=OL, width=4)
-    d.line([(115, 740), (115, 784)], fill=NAVY_D, width=3)
-    d.rectangle([106, 754, 124, 768], fill=(250, 206, 40), outline=OL, width=2)
-    d.chord([40, 772, 200, 812], 0, 180, fill=NAVY_D, outline=OL, width=4)
+    d.chord([40, 782, 200, 814], 0, 180, fill=NAVY_D, outline=OL, width=4)    # brim (drawn first)
+    d.chord([50, 748, 180, 844], 180, 360, fill=NAVY, outline=OL, width=4)    # crown sits ON the brim (no gap)
+    d.rectangle([54, 794, 176, 798], fill=NAVY)                               # hides the seam line
+    d.line([(115, 752), (115, 792)], fill=NAVY_D, width=3)
+    d.rectangle([106, 762, 124, 776], fill=(250, 206, 40), outline=OL, width=2)
     d.rectangle([300, 770, 360, 804], fill=(250, 250, 250), outline=OL, width=3)   # mug
     d.text((330, 788), "R", font=font(800, 18), fill=(210, 52, 56), anchor="mm")
     d.rectangle([400, 760, 470, 804], fill=(40, 44, 60), outline=OL, width=3)      # clipboard
