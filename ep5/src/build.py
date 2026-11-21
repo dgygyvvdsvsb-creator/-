@@ -148,24 +148,30 @@ def window(img, x, y, w, h, night=False, t=0):
 
 # ------------------------------------------------------------------ scenes (u = 0..1 inside the line)
 def s01(t, u, T):
-    """hook: mid-dive, the ball squirms through the oversized gloves"""
+    """hook: keeper flying flat, arms out — the ball squirms between the oversized gloves"""
     img = pitch_set()
-    goal(img, 360, 900, 640, 330)
-    # keeper flying across, huge (frame 0 already in the air)
-    x = lerp(240, 470, ease_out(u * 1.2))
-    y = lerp(1000, 960, u) - math.sin(clamp(u * 1.3) * math.pi) * 60
-    paste(img, hero(pose="dive", gloves=True), 11, x, y)
-    # ball passing through the gloves, toward the net
-    bu = clamp((u - 0.05) / 0.7)
-    bx, by = lerp(250, 560, bu), lerp(760, 760, bu)
-    paste(img, ball_sprite(), 9, bx, by + 30)
-    glow_ring(img, bx, by, 70 + 30 * math.sin(t * 20), 0.8)
-    speed_lines(img, t, 360, 760, n=18, a=90)
-    if u > 0.45:  # net ripple + flash
-        impact_lines(img, 560, 760, T + 0.45 * 3.1, t)
-    pill(img, 360, 1170, "EP.4 · YOU CHOSE: ACADEMY", (40, 150, 80), 1.0, 28)
-    rain(img, t)
-    img = cam(img, 1.08 - 0.06 * u, 360, 800, *shake(t, T + 1.35, 0.3, 12))
+    goal(img, 360, 900, 680, 380)
+    speed_lines(img, t, 330, 690, n=12, a=70, r0=330, r1=700)   # behind the action
+    # keeper: arms-up sprite turned exactly 90 degrees -> clean horizontal dive to the right
+    kx = lerp(300, 380, ease_out(u * 1.3))
+    ky = 760 - math.sin(clamp(u * 1.2) * math.pi) * 30
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), 12).rotate(-90, expand=True, resample=Image.NEAREST)
+    shadow(img, kx, 1000, 380, 40, 70)
+    img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
+    gx = kx + sp.width / 2 - 70           # gloves (front end of the body)
+    # ball: arrives at the gloves at frame 0, slips through and on into the net
+    bu = ease_in_out(clamp(u / 0.55))
+    bx = min(640, gx + 30 + 70 * bu)
+    by = ky + 6 + 110 * bu
+    if u < 0.12:
+        glow_ring(img, gx + 30, ky + 6, 80, 0.5, (255, 250, 210))
+    paste(img, ball_sprite(), 10, bx, by + 35)
+    impact_lines(img, gx + 30, ky + 20, T - 0.05, t, 12)
+    if u > 0.5:
+        impact_lines(img, bx, by, T + 0.5 * LINES[0][1], t, 10)
+    pill(img, 360, 1180, "YOU CHOSE: ACADEMY", (40, 150, 80), 1.0, 30)
+    rain(img, t, a=55, n=90)
+    img = cam(img, 1.06 - 0.05 * u, 380, 760, *shake(t, T + 0.5 * LINES[0][1], 0.3, 10))
     return img
 
 

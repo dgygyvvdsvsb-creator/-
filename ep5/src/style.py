@@ -87,13 +87,13 @@ def outline(im, col=OL):
 def person(kit=None, skin="light", hair="dark", style="short", pose="stand", view="front", phase=0.0,
            blink=False, mouth="flat", look=0, gloves=False, bracelet=False, extra=None):
     """returns an RGBA sprite (W=24 x H=34 incl. 3px margin) with outline. extra: list of callables(d)"""
-    W, H = 24, 36
+    W, H = 24, 42
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     sk, skd = SKIN[skin]
     hc = HAIR[hair]
     kit = kit or Kit((60, 120, 200), (30, 34, 50), (60, 120, 200))
-    ox, oy = 3, 4  # margin so outline/limbs fit
+    ox, oy = 3, 10  # margin so outline/limbs fit
     R = lambda x0, y0, x1, y1, c: d.rectangle([ox + x0, oy + y0, ox + x1, oy + y1], fill=c)
     P = lambda x, y, c: d.point((ox + x, oy + y), fill=c)
 
@@ -174,8 +174,10 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 1, 13 + int(s * 2)); arm(1, 16, 13 - int(s * 2))
     elif pose == "ready":
         arm(-1, -1, 11); arm(1, 18, 11)
-    elif pose in ("celebrate", "dive", "reach"):
+    elif pose in ("celebrate", "dive"):
         arm(-1, 2, 1); arm(1, 15, 1)
+    elif pose == "reach":   # arms stretched far beyond the head (flying save)
+        arm(-1, 5, -7); arm(1, 12, -7)
     elif pose == "kick":
         arm(-1, -1, 12); arm(1, 17, 13)
     elif pose == "whisper":
@@ -381,10 +383,14 @@ def crowd_band(img, y0, y1, seed=1, blur=2.5, cols=None):
 
 def pitch(img, y0, stripes=10, c1=(58, 150, 72), c2=(52, 138, 66), lines=True, diag=0.0):
     d = ImageDraw.Draw(img)
-    for i in range(stripes * 3):
+    i = 0
+    while True:
         y = y0 + (i ** 1.25) * 9
         y2 = y0 + ((i + 1) ** 1.25) * 9
         d.rectangle([0, y, FW, y2], fill=c1 if i % 2 else c2)
+        if y2 > FH:
+            break
+        i += 1
     if lines:
         d.line([(-50, y0 + 40), (FW + 50, y0 + 40 + diag * FW)], fill=(236, 244, 236), width=5)
 
