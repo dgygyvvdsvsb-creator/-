@@ -11,11 +11,12 @@ FOLLOW = "SUBSCRIBE" if PLATFORM == "youtube" else "FOLLOW"
 LINES = [
     [("YOU", W), ("ASKED", W), ("FOR", W), ("THE", W), ("SHIRT.", Y)],
     [("YOU", W), ("KNOCK.", O), ("THE", W), ("COACH", W), ("LOOKS", W), ("UP.", W)],
-    [("\"WEDNESDAY.", Y), ("A", W), ("FRIENDLY.", W), ("PLAY", W), ("WELL...", W), ("YOU", W), ("START", G), ("SATURDAY.\"", Y)],
+    [("\"WEDNESDAY.", Y), ("FIRST", W), ("TEAM", W), ("AGAINST", W), ("THE", W), ("RESERVES.", B), ("PLAY", W), ("WELL...", W),
+     ("YOU", W), ("START", G), ("SATURDAY.\"", Y)],
     [("MONDAY.", W), ("TRAINING.", W), ("NO", Y), ("DAYS", Y), ("OFF.", Y)],
     [("YOU'RE", W), ("NOT", R_), ("NUMBER", W), ("ONE.", Y), ("NOT", W), ("YET.", G)],
     [("WEDNESDAY.", W), ("OKAFOR'S", Y), ("STILL", W), ("INJURED.", R_)],
-    [("SO", W), ("YOU", G), ("START.", G), ("FIRST", Y), ("TEAM.", Y)],
+    [("SO", W), ("TODAY", W), ("YOU", G), ("KEEP", G), ("FOR", W), ("THE", W), ("FIRST", Y), ("TEAM.", Y)],
     [("MINUTE", W), ("THREE.", W), ("ONE", W), ("PASS.", B), ("ONE", W), ("TOUCH.", B)],
     [("YOU", W), ("FLY...", Y), ("NOT", R_), ("ENOUGH.", R_), ("ZERO,", W), ("ONE.", R_)],
     [("MASON", R_), ("LAUGHS.", W), ("\"TOLD", W), ("YOU.\"", R_)],
@@ -89,7 +90,8 @@ def ours(n, **kw):
 
 
 def opp_keeper(**kw):
-    return person(Kit((140, 70, 180), (30, 30, 40), (140, 70, 180), 1), skin="tan", hair="black", style="short", gloves=True, **kw)
+    """the reserves' keeper is Dixon (#2) — your rival for the shirt"""
+    return dixon(**kw)
 
 
 def score_state(t):
@@ -104,7 +106,7 @@ def mini_score(img, t, minute):
     y = 290
     d.rounded_rectangle([200, y, 520, y + 56], 12, fill=(14, 16, 30), outline=OL, width=4)
     d.rectangle([212, y + 12, 236, y + 44], fill=RS); d.rectangle([484, y + 12, 508, y + 44], fill=NF)
-    d.text((360, y + 28), f"RIV  {l} - {r}  NOR", font=font(800, 26), fill=(255, 255, 255), anchor="mm")
+    d.text((360, y + 28), f"1ST  {l} - {r}  RES", font=font(800, 26), fill=(255, 255, 255), anchor="mm")
     d.rounded_rectangle([318, y + 58, 402, y + 86], 8, fill=(210, 52, 56))
     d.text((360, y + 72), minute, font=font(800, 20), fill=(255, 255, 255), anchor="mm")
 
@@ -332,7 +334,7 @@ def s_walkout(t, u, T):
         ring = Image.new("RGBA", img.size, (0, 0, 0, 0))
         ImageDraw.Draw(ring).ellipse([hx - 34, hy - 6, hx + 34, hy + 16], outline=C_G + (230,), width=5)   # ring on the grass under his feet
         img.alpha_composite(ring)
-    pill(img, 360, 1250, "FRIENDLY · RIVERSIDE vs NORTHFIELD", (14, 16, 30), spring(t - T - 0.2, 13, 7), 26)
+    pill(img, 360, 1250, "FIRST TEAM vs RESERVES", (14, 16, 30), spring(t - T - 0.2, 13, 7), 26)
     return cam(img, 1 + 0.12 * ease_in_out(clamp((u - 0.5) / 0.5)), 360, 1180)
 
 
@@ -529,7 +531,7 @@ def s_board(t, u, T):
     d = ImageDraw.Draw(img)
     d.rectangle([0, 560, FW, FH], fill=(18, 20, 34))
     l, r = score_state(t)
-    scoreboard(img, 640, "RIV", "NOR", l, r, "90'", spring(t - T, 12, 7), t=t)
+    scoreboard(img, 640, "1ST", "RES", l, r, "90'", spring(t - T, 12, 7), t=t)
     for k in range(3):  # flashing "LAST MINUTE" lights
         if int(t * 4 + k) % 2:
             d.ellipse([170 + k * 180, 900, 200 + k * 180, 930], fill=(240, 80, 80))
@@ -611,7 +613,7 @@ def s_whistle(t, u, T):
     crowd_band(img, 0, 560, seed=34, blur=1.0)
     d = ImageDraw.Draw(img)
     d.rectangle([0, 560, FW, FH], fill=(18, 20, 34))
-    scoreboard(img, 640, "RIV", "NOR", 1, 1, "FULL TIME", 1.0, t=t)
+    scoreboard(img, 640, "1ST", "RES", 1, 1, "FULL TIME", 1.0, t=t)
     if u > 0.55:
         pill(img, 360, 1000, "SHOOTOUT", (200, 40, 50), spring(t - T - 0.55 * (STARTS[19] - T), 13, 7), 56)
     return cam(img, 1 + 0.05 * u, 360, 760)
