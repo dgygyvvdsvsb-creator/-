@@ -702,8 +702,9 @@ def s_training(t, u, T):
         ball_at(img, c, *at(shot, a))
     else:
         draw_ball(img, gx, gy + 10, 0.7)
-    ground_shadow(img, c, -1.8, 7.0, 0.4)
-    sprite_at(img, c, coach(look=1), -1.8, 7.0, height_m=1.75)
+    ground_shadow(img, c, -3.2, 10.5, 0.4)
+    sprite_at(img, c, coach(look=1), -3.2, 10.5, height_m=1.75)   # beside the goal, watching
+    paste(img, dixon(view="back", pose="kick" if phase < 0.25 else "stand", phase=clamp(phase / 0.2), gloves=False), 11, 300, 1330)  # Dixon takes the shots
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([200, 252, 520, 308], 12, fill=(14, 16, 30), outline=C_Y, width=4)
     d.text((360, 280), f"CATCHES {int(1 + 60 * u)}", font=font(800, 28), fill=C_Y, anchor="mm")
@@ -755,13 +756,121 @@ def s_okafor(t, u, T):
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([248, 896, 300, 930], 10, fill=(170, 220, 250), outline=OL, width=4)   # ice pack on the knee
     # crutches leaning on the bench
-    for dx in (0, 22):
-        d.line([(470 + dx, 1060), (440 + dx, 700)], fill=(180, 180, 190), width=10)
+    for dx in (0, 22):   # crutches leaning on the bench, on Okafor's other side
+        d.line([(150 + dx, 1060), (180 + dx, 700)], fill=OL, width=14)
+        d.line([(150 + dx, 1060), (180 + dx, 700)], fill=(180, 180, 190), width=8)
     paste(img, hero(gloves=True, look=-1), 9, 560, 1060)
     return cam(img, 1 + 0.05 * u, 360, 860)
 
 
-SCENES = [s_hook, s_knock, s_coach, s_training, s_notyet, s_okafor, s_walkout, s_strike, s_goal, s_mason, s_getup,
+def _lin(keys, v):
+    """piecewise-linear interpolation of (v, (X, Z)) keyframes"""
+    if v <= keys[0][0]:
+        return keys[0][1]
+    for (v0, p0), (v1, p1) in zip(keys, keys[1:]):
+        if v0 <= v <= v1:
+            f = ease_in_out((v - v0) / max(1e-6, v1 - v0))
+            return tuple(lerp(a, b, f) for a, b in zip(p0, p1))
+    return keys[-1][1]
+
+
+def s_attack(t, u, T):
+    """lines 7+8 as ONE continuous move: one-two around our two defenders, low shot through your legs, goal"""
+    A0, A1 = STARTS[7], STARTS[9]
+    v = clamp((t - A0) / (A1 - A0))
+    vs = clamp((STARTS[8] - A0) / (A1 - A0) - 0.03)        # the shot lands on "THROUGH YOUR LEGS"
+    GZ = 22.0
+    p7 = [(0.0, (-1.3, 7.5)), (0.20, (-1.3, 9.5)), (0.42, (-1.1, 12.0)), (0.52, (-0.9, 13.4)), (1.0, (-0.8, 15.5))]
+    p9 = [(0.0, (1.5, 9.0)), (0.22, (1.8, 10.2)), (0.40, (1.8, 12.5)), (0.55, (0.9, 14.5)), (vs - 0.08, (0.5, 16.0)), (1.0, (0.4, 16.8))]
+    d4 = [(0.0, (-0.9, 14.0)), (0.45, (-1.1, 12.9)), (0.6, (-1.6, 12.4)), (1.0, (-1.7, 12.0))]     # beaten by the one-two
+    d5 = [(0.0, (1.4, 14.0)), (0.30, (1.6, 12.6)), (0.38, (2.0, 12.3)), (1.0, (2.4, 11.9))]        # beaten by the dribble
+    # ball: with #7 -> pass to #9 -> dribble -> back to #7 -> through ball to #9 -> shot
+    b7 = lambda vv: (_lin(p7, vv)[0] + 0.35, _lin(p7, vv)[1] + 0.5)
+    b9 = lambda vv: (_lin(p9, vv)[0] - 0.3, _lin(p9, vv)[1] + 0.5)
+    passes = [(0.17, 0.25, b7, b9), (0.42, 0.50, b9, b7), (0.53, 0.60, b7, b9)]
+    owner = None
+    ball = None
+    if v < 0.17:
+        ball = b7(v)
+    elif v < 0.25:
+        f = (v - 0.17) / 0.08; ball = tuple(lerp(a, b, f) for a, b in zip(b7(0.17), b9(0.25)))
+    elif v < 0.42:
+        ball = b9(v)
+    elif v < 0.50:
+        f = (v - 0.42) / 0.08; ball = tuple(lerp(a, b, f) for a, b in zip(b9(0.42), b7(0.50)))
+    elif v < 0.53:
+        ball = b7(v)
+    elif v < 0.60:
+        f = (v - 0.53) / 0.07; ball = tuple(lerp(a, b, f) for a, b in zip(b7(0.53), b9(0.60)))
+    elif v < vs:
+        ball = b9(v)
+    shot = arc((b9(vs)[0], b9(vs)[1], 0.1), (0.05, GZ + 0.6, 0.18), apex=0.05)
+    # camera follows the move
+    cz = lerp(0.0, 7.0, ease_in_out(clamp(v / vs)))
+    cx = lerp(0.0, 0.5, clamp(v / vs))
+    c = Cam(camX=cx, camH=2.4, hor=440)
+    img = backdrop(440, stadium=True)
+
+    class Shift:  # world shift so the camera can move forward
+        def __init__(s_, c_, z): s_.c, s_.z = c_, z
+        def p(s_, X, Z, Y=0.0): return s_.c.p(X, Z - s_.z, Y)
+        def k(s_, Z): return s_.c.k(Z - s_.z)
+        hor = 440
+    sc = Shift(c, cz)
+    pitch_persp(img, sc, Zgoal=GZ)
+    goal3d(img, sc, GZ)
+    after = v >= vs
+    # our keeper on the goal line
+    ground_shadow(img, sc, 0, GZ, 0.45)
+    sprite_at(img, sc, hero(pose="ready" if not after or v < vs + 0.12 else "stand", gloves=True, mouth="open" if after else "flat"), 0, GZ, height_m=1.6)
+    # draw far to near
+    ppl = []
+    for keys, sp_fn in ((d4, lambda: ours(4, pose="run", phase=t * 2.4)), (d5, lambda: ours(5, pose="run", phase=t * 2.4)),
+                        (p7, lambda: opp(7, view="back", pose="run", phase=t * 2.6)), (p9, lambda: opp(9, view="back", pose="kick" if abs(v - vs) < 0.05 else "run", phase=clamp((v - vs + 0.05) / 0.06) if abs(v - vs) < 0.05 else t * 2.6))):
+        X, Z = _lin(keys, v)
+        ppl.append((Z, X, sp_fn))
+    for Z, X, sp_fn in sorted(ppl, key=lambda q: -q[0]):
+        if Z - cz < 0.8:
+            continue
+        ground_shadow(img, sc, X, Z, 0.35)
+        sprite_at(img, sc, sp_fn(), X, Z, height_m=1.55)
+    # tactical overlay: rings under the two attackers, dashed pass line for the next pass
+    if not after:
+        for keys in (p7, p9):
+            X, Z = _lin(keys, v)
+            ring_on_grass(img, sc, X, Z, 0.55, C_Y, 3)
+        for (v0, v1, fa, fb) in passes:
+            if v0 - 0.07 <= v < v1:
+                path = [(fa(v0)[0], fa(v0)[1], 0.05), (fb(v1)[0], fb(v1)[1], 0.05)]
+                dotted_path(img, sc, arc(path[0], path[1], apex=0.0), 1.0, from_=clamp((v - v0) / (v1 - v0)))
+        if 0.28 <= v < 0.42:   # dribble arrow around #5
+            pts = [sc.p(1.8 + 0.8 * math.sin(a * math.pi), lerp(10.4, 13.2, a)) for a in np.linspace(0, 1, 16)]
+            dd = ImageDraw.Draw(img)
+            for j in range(0, 15, 2):
+                dd.line([pts[j], pts[j + 1]], fill=OL, width=9); dd.line([pts[j], pts[j + 1]], fill=C_Y, width=5)
+        if ball:
+            ball_at(img, sc, ball[0], ball[1], 0.11)
+        if vs - 0.1 <= v:
+            dotted_path(img, sc, shot, 1.0, from_=0.0)
+    else:
+        a = clamp((v - vs) / 0.12)
+        if a < 1:
+            ball_trail(img, sc, shot, a, 0.12)
+            ball_at(img, sc, *at(shot, a))
+        else:
+            b = clamp((v - vs - 0.12) / 0.2)
+            x, y = sc.p(0.05, GZ + 1.0, 0.18 * (1 - b))
+            draw_ball(img, x, y + 6, 0.55)
+            impact_lines(img, x, y, A0 + (vs + 0.12) * (A1 - A0), t, 10)
+    mini_score(img, t, "3'")
+    if after:
+        img = flash(img, 0.35 * clamp(1 - abs(v - vs - 0.12) * 10), (255, 50, 50))
+    zoom = 1.0 + 0.25 * ease_in_out(clamp((v - vs + 0.05) / 0.15))
+    kx, ky = sc.p(0, GZ, 0.8)
+    return cam(img, zoom, kx, ky, *shake(t, A0 + (vs + 0.12) * (A1 - A0), .3, 10))
+
+
+SCENES = [s_hook, s_knock, s_coach, s_training, s_notyet, s_okafor, s_walkout, s_attack, s_attack, s_mason, s_getup,
           s_header, s_1v1, s_mason_goal, s_board, s_fk, s_slowmo, s_finger, s_whistle, s_pen, s_choice, s_end]
 
 
@@ -779,7 +888,7 @@ def frame(t):
     end = STARTS[i + 1] if i + 1 < len(STARTS) else TOTAL
     u = clamp((t - T) / max(0.1, end - T))
     img = SCENES[i](t, u, T).convert("RGBA")
-    if i > 0 and t - T < 0.07:
+    if i > 0 and t - T < 0.07 and SCENES[i] is not SCENES[i - 1]:
         img = flash(img, 0.3)
     overlay(img, t, i)
     return img.convert("RGB")

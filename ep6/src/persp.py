@@ -157,9 +157,10 @@ def pitch_persp(img, cam, Zgoal=None, box=True, centre=None, warm=True):
     if box:
         L(-14, G, -14, G - 11); L(14, G, 14, G - 11); L(-14, G - 11, 14, G - 11)   # penalty box (youth)
         L(-6, G, -6, G - 4); L(6, G, 6, G - 4); L(-6, G - 4, 6, G - 4)               # 6-yard box
-        x, y = cam.p(0, G - 8)
-        r = max(2, cam.k(G - 8) * 0.12)
-        d.ellipse([x - r * 1.6, y - r * 0.6, x + r * 1.6, y + r * 0.6], fill=LINE)      # spot
+        if G - 8 > 6:
+            x, y = cam.p(0, G - 8)
+            r = max(2, cam.k(G - 8) * 0.12)
+            d.ellipse([x - r * 1.6, y - r * 0.6, x + r * 1.6, y + r * 0.6], fill=LINE)      # spot
         pts = [cam.p(6 * math.cos(a), G - 8 - 6 * math.sin(a)) for a in np.linspace(0.6, math.pi - 0.6, 20)]
         pts = [p for p, a in zip(pts, np.linspace(0.6, math.pi - 0.6, 20)) if G - 8 - 6 * math.sin(a) < G - 11]
         if len(pts) > 1:
