@@ -87,7 +87,7 @@ def outline(im, col=OL):
 def person(kit=None, skin="light", hair="dark", style="short", pose="stand", view="front", phase=0.0,
            blink=False, mouth="flat", look=0, gloves=False, bracelet=False, extra=None):
     """returns an RGBA sprite (W=24 x H=34 incl. 3px margin) with outline. extra: list of callables(d)"""
-    W, H = 24, 42
+    W, H = 24, 39
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     sk, skd = SKIN[skin]
@@ -115,7 +115,7 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
                 y = 18 + math.cos(ang) * i
                 c = sk if i < 4 else (kit.socks if i < 8 else OL)
                 R(int(x) - 1, int(y), int(x) + 1, int(y), c)
-        elif sit or pose == "sit":
+        elif sit or pose in ("sit", "hurt"):
             R(5, 18, 7, 20, kit.shorts); R(10, 18, 12, 20, kit.shorts)
             R(5, 21, 7, 23, sk); R(10, 21, 12, 23, sk)
             R(5, 24, 7, 25, kit.socks); R(10, 24, 12, 25, kit.socks)
@@ -131,7 +131,7 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
 
     legs()
     # shorts
-    if pose != "sit":
+    if pose not in ("sit", "hurt"):
         R(4, 15, 13, 18, kit.shorts)
         R(11, 15, 13, 18, shade(kit.shorts))
         R(8, 17, 9, 18, shade(kit.shorts, 0.7))
@@ -167,7 +167,9 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
             by = round(lerp(sy, hy, 0.75))
             R(bx - 1, by, bx + 1, by, (225, 30, 40))
 
-    if pose in ("stand", "sit"):
+    if pose == "hurt":
+        arm(-1, 5, 20); arm(1, 11, 20)
+    elif pose in ("stand", "sit"):
         arm(-1, 1, 15); arm(1, 16, 15)
     elif pose == "run":
         s = math.sin(phase * math.tau)
@@ -180,6 +182,8 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 5, -7); arm(1, 12, -7)
     elif pose == "kick":
         arm(-1, -1, 12); arm(1, 17, 13)
+    elif pose == "catch":
+        arm(-1, 6, 12); arm(1, 11, 12)
     elif pose == "whisper":
         arm(-1, 1, 15); arm(1, 11, 6)
     elif pose == "phone":
@@ -193,9 +197,15 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         if style == "short":
             R(4, -1, 13, 1, hc); R(4, 2, 4, 3, hc); R(13, 2, 13, 3, hc); R(7, 2, 8, 2, hc)
         elif style == "curly":
-            R(3, -2, 14, 1, hc); R(3, 2, 3, 4, hc); R(14, 2, 14, 4, hc)
+            R(3, -2, 14, 1, hc); R(2, 1, 3, 5, hc); R(14, 1, 15, 5, hc)
+            for x in range(2, 16, 2):
+                R(x, -4, x, -3, hc)            # bumpy curly top
             for x in range(3, 15, 2):
                 P(x, -3, hc)
+            for y in range(1, 6, 2):
+                P(1, y, hc); P(16, y, hc)       # curls on the sides
+            for x in (5, 9, 12):
+                P(x, -1, shade(hc, 1.35))       # curl highlights
         elif style == "spiky":
             R(4, -1, 13, 1, hc); R(4, 2, 4, 2, hc); R(13, 2, 13, 2, hc)
             for x in (4, 7, 10, 13):
@@ -229,8 +239,13 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         R(4, -1, 13, 6, hc)
         R(4, 6, 13, 7, skd)
         if style == "curly":
-            for x in range(3, 15, 2):
-                P(x, -2, hc)
+            R(3, -2, 14, 6, hc)
+            for x in range(2, 16, 2):
+                R(x, -4, x, -3, hc)
+            for y in range(0, 7, 2):
+                P(2, y, hc); P(15, y, hc)
+            for x in (5, 9, 12):
+                P(x, 1, shade(hc, 1.35)); P(x - 1, 4, shade(hc, 1.35))
         if style == "bald":
             R(5, -1, 12, 3, sk)
     if extra:
@@ -249,24 +264,27 @@ def grandad(pose="sit", blink=False, mouth="smile", tube=False, look=0):
     def details(d, ox, oy):
         P = lambda x, y, c: d.point((ox + x, oy + y), fill=c)
         R = lambda x0, y0, x1, y1, c: d.rectangle([ox + x0, oy + y0, ox + x1, oy + y1], fill=c)
-        R(5, 4, 12, 8, (245, 243, 248))           # beard
+        R(5, 5, 12, 8, (245, 243, 248))           # beard
         R(6, 8, 11, 9, (245, 243, 248))
         R(12, 5, 12, 8, (210, 210, 222))
+        R(8, 4, 9, 4, (200, 150, 120))            # nose
         if mouth == "open":
-            R(7, 6, 9, 6, (150, 40, 50))
+            R(7, 6, 9, 7, (150, 40, 50))
         elif mouth == "smile":
-            R(7, 6, 9, 6, (150, 40, 50))
+            R(7, 7, 9, 7, (150, 40, 50))
         # glasses
         for ex in (5, 9):
             R(ex, 2, ex + 2, 3, (60, 60, 76))
         if not blink:
             P(6 + look, 3, (250, 250, 250)); P(10 + look, 3, (250, 250, 250))
-        if tube:
-            R(3, 4, 4, 4, (190, 225, 245)); R(12, 4, 13, 4, (190, 225, 245)); R(7, 4, 9, 4, (190, 225, 245))
+        if tube:  # nasal cannula: under the nose, over both ears, down to the chest
+            pass  # cannula is drawn thin at full resolution by the scene
         for y in (10, 12, 14):
             P(8, y, (240, 206, 120))  # buttons
         R(8, 9, 9, 9, (238, 232, 214))
-    im = person(card, skin="old", hair="white", style="bald", pose="sit" if pose == "sit" else "stand",
+    if tube:
+        SKIN["ill"] = ((222, 190, 168), (196, 164, 146))
+    im = person(card, skin="ill" if tube else "old", hair="white", style="bald", pose="sit" if pose == "sit" else "stand",
                 blink=blink, mouth="flat", extra=[details])
     return im
 
@@ -281,10 +299,21 @@ def cane(h=18):
 
 
 def ball_sprite():
-    im = Image.new("RGBA", (7, 7), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    d.ellipse([0, 0, 6, 6], fill=(250, 250, 250))
-    d.rectangle([3, 2, 3, 4], fill=OL); d.rectangle([2, 3, 4, 3], fill=OL)
+    """round pixel ball 13x13 with black patches"""
+    n = 13
+    im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    px = im.load()
+    c = (n - 1) / 2
+    for y in range(n):
+        for x in range(n):
+            if (x - c) ** 2 + (y - c) ** 2 <= (c + 0.35) ** 2:
+                px[x, y] = (250, 250, 250, 255)
+    for x, y in ((6, 5), (5, 6), (6, 6), (7, 6), (5, 7), (6, 7), (7, 7)):   # centre patch
+        px[x, y] = OL + (255,)
+    for x, y in ((2, 4), (2, 5), (10, 4), (10, 5), (4, 10), (5, 10), (8, 10), (7, 10), (6, 1), (5, 1), (7, 1)):
+        px[x, y] = (60, 60, 70, 255)
+    for x, y in ((3, 3), (4, 3), (3, 2)):  # shine
+        px[x, y] = (255, 255, 255, 255)
     return outline(im)
 
 
@@ -326,12 +355,12 @@ def mason(**kw):
 
 def okafor(**kw):
     return person(Kit((246, 206, 40), (30, 30, 36), (246, 206, 40), 1, num_col=(30, 30, 36)), skin="dark",
-                  hair="black", style="short", gloves=True, **kw)
+                  hair="black", style="short", **{"gloves": True, **kw})
 
 
 def dixon(**kw):
     return person(Kit((60, 120, 210), (30, 34, 50), (60, 120, 210), 2), skin="tan", hair="brown",
-                  style="curly", gloves=True, **kw)
+                  style="curly", **{"gloves": True, **kw})
 
 
 def coach(**kw):

@@ -165,7 +165,7 @@ def s01(t, u, T):
     by = ky + 6 + 110 * bu
     if u < 0.12:
         glow_ring(img, gx + 30, ky + 6, 80, 0.5, (255, 250, 210))
-    paste(img, ball_sprite(), 10, bx, by + 35)
+    paste(img, ball_sprite(), 6, bx, by + 35)
     impact_lines(img, gx + 30, ky + 20, T - 0.05, t, 12)
     if u > 0.5:
         impact_lines(img, bx, by, T + 0.5 * LINES[0][1], t, 10)
@@ -218,39 +218,50 @@ def dorm(t, night=False):
         d.rectangle([40, y, 354, y + 40], fill=(120, 80, 50), outline=OL, width=4)
         d.rectangle([64, y - 34, 330, y], fill=(240, 240, 248), outline=OL, width=4)
         d.rectangle([64, y - 34, 130, y - 10], fill=(255, 255, 255), outline=OL, width=3)
-    # bag + poster + shelf
-    d.rectangle([520, 940, 640, 1020], fill=(40, 46, 80), outline=OL, width=5)
-    d.rectangle([540, 920, 620, 944], outline=OL, width=6)
+    # poster
     d.rectangle([440, 560, 560, 700], fill=(250, 206, 40), outline=OL, width=5)
     d.text((500, 630), "SAVE", font=font(800, 26), fill=OL, anchor="mm")
     return img
 
 
+def in_bed(img, sprite, x0, top, scale, blanket):
+    """character lying in a bunk: head on the pillow (left), blanket over the body"""
+    sp = big(sprite, scale).rotate(90, expand=True, resample=Image.NEAREST)
+    img.alpha_composite(sp, (int(x0), int(top - sp.height + 26)))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([x0 + 92, top - 98, 336, top + 6], 18, fill=blanket, outline=OL, width=5)
+    d.line([(x0 + 112, top - 50), (330, top - 50)], fill=shade(blanket, 0.8), width=4)
+
+
 def s04(t, u, T):
     img = dorm(t)
     d = ImageDraw.Draw(img)
-    # alarm clock flashing 06:00
     on = int(t * 4) % 2 == 0
     d.rounded_rectangle([470, 760, 650, 840], 12, fill=(20, 20, 30), outline=OL, width=5)
     d.text((560, 800), "06:00", font=font(800, 48), fill=(255, 70, 70) if on else (120, 40, 40), anchor="mm")
-    # hero sitting up in the lower bunk, sleepy
-    paste(img, hero(pose="sit", blink=u > 0.6 and u < 0.7, bracelet=True), 7, 200, 860)
-    pill(img, 360, 1150, "MONDAY", (40, 90, 200), spring(t - T, 13, 7), 32)
-    pill(img, 360, 1215, "2 HRS FROM HOME", (60, 60, 80), spring(t - T - 0.4, 13, 7), 26)
-    return cam(img, 1 + 0.05 * u, 360, 700) if u < 0.5 else cam(img, 1.6 + 0.08 * u, 520, 790, *shake(t, T + 0.5 * LINES[3][1], .25, 8))
+    # Dixon asleep in the top bunk, you wake up in the bottom bunk
+    in_bed(img, dixon(blink=True, gloves=False), 58, 486, 5, (60, 110, 200))
+    in_bed(img, hero(blink=u < 0.45, mouth="flat", bracelet=False), 58, 826, 5, (40, 150, 80))
+    if u < 0.5:
+        pill(img, 360, 1150, "MONDAY", (40, 90, 200), spring(t - T, 13, 7), 32)
+        pill(img, 360, 1215, "2 HRS FROM HOME", (60, 60, 80), spring(t - T - 0.4, 13, 7), 26)
+    return cam(img, 1 + 0.05 * u, 360, 700) if u < 0.5 else cam(img, 1.6 + 0.08 * u, 0, 1280, *shake(t, T + 0.5 * LINES[3][1], .25, 8))
 
 
 def s05(t, u, T):
     img = dorm(t)
-    # hero standing, says hi; roommate on the top bunk turns to the wall
-    paste(img, hero(mouth="smile", bracelet=True), 9, 520, 1080)
+    d = ImageDraw.Draw(img)
+    # bottom bunk now empty (you got up), blanket thrown back
+    d.rounded_rectangle([230, 728, 336, 832], 18, fill=(40, 150, 80), outline=OL, width=5)
+    d.line([(244, 776), (330, 776)], fill=shade((40, 150, 80), 0.8), width=4)
+    # you stand on the floor and say hi; Dixon stays lying in the top bunk and turns to the wall
+    paste(img, hero(mouth="smile", bracelet=True, look=-1), 9, 580, 1080)
     turned = u > 0.35
-    rm = dixon(view="back" if turned else "front", pose="sit", look=1)
-    paste(img, rm.rotate(90 if turned else 0, expand=True, resample=Image.NEAREST), 6, 200, 520)
-    bubble(img, 540, 690, "HI!", spring(t - T - 0.1, 13, 7), 36)
+    in_bed(img, dixon(view="back" if turned else "front", look=1, gloves=False), 58, 486, 5, (60, 110, 200))
+    bubble(img, 650, 660, "HI!", spring(t - T - 0.1, 13, 7), 36)
     if u > 0.62:
         pill(img, 200, 600, "DIXON · KEEPER #2", (40, 90, 200), spring(t - T - 0.62 * LINES[4][1], 13, 7), 26)
-    return cam(img, 1.03 + 0.05 * u, 360, 760) if u < 0.35 else cam(img, 1.9 + 0.1 * u, 200, 520)
+    return cam(img, 1.03 + 0.05 * u, 360, 760) if u < 0.35 else cam(img, 1.6 + 0.08 * u, 0, 450)
 
 
 def keepers_line(img, t, sel=None, hero_scale=8):
@@ -265,11 +276,19 @@ def s06(t, u, T):
     goal(img, 360, 650, 520, 230)
     keepers_line(img, t)
     # the yellow #1 shirt floating above, glowing
-    shirt = person(Kit((246, 206, 40), (0, 0, 0, 0), (0, 0, 0, 0), 1, num_col=OL))
-    sh = shirt.crop((0, 10, 24, 22))
-    k = spring(t - T - 0.9, 12, 6)
-    glow_ring(img, 360, 460, 110, 0.6 * clamp(k), (255, 230, 120))
-    paste(img, sh, int(14 * clamp(k, 0.05, 1.1)) or 1, 360, 520)
+    k = clamp(spring(t - T - 0.9, 12, 6), 0, 1.15)
+    if k > 0.05:
+        glow_ring(img, 360, 470, 120 * k, 0.6, (255, 230, 120))
+        d = ImageDraw.Draw(img)
+        s_ = 10 * k
+        cx, cy = 360, 470 + math.sin(t * 3) * 6
+        d.arc([cx - 2 * s_, cy - 9 * s_, cx + 2 * s_, cy - 5 * s_], 180, 360, fill=(200, 200, 210), width=max(2, int(s_ * .6)))
+        d.line([(cx - 9 * s_, cy - 2 * s_), (cx, cy - 5 * s_), (cx + 9 * s_, cy - 2 * s_)], fill=(200, 200, 210), width=max(2, int(s_ * .6)))
+        body = [(cx - 6 * s_, cy - 3 * s_), (cx - 11 * s_, cy), (cx - 9 * s_, cy + 3 * s_), (cx - 6 * s_, cy + 2 * s_),
+                (cx - 6 * s_, cy + 9 * s_), (cx + 6 * s_, cy + 9 * s_), (cx + 6 * s_, cy + 2 * s_), (cx + 9 * s_, cy + 3 * s_),
+                (cx + 11 * s_, cy), (cx + 6 * s_, cy - 3 * s_), (cx + 2 * s_, cy - 3 * s_), (cx, cy - 1 * s_), (cx - 2 * s_, cy - 3 * s_)]
+        d.polygon(body, fill=(246, 206, 40), outline=OL, width=max(2, int(s_ * .5)))
+        d.text((cx, cy + 4 * s_), "1", font=font(800, max(8, int(9 * s_))), fill=OL, anchor="mm")
     pill(img, 360, 1170, "3 KEEPERS · 1 SHIRT", (60, 60, 80), spring(t - T, 13, 7), 30)
     return cam(img, 1 + 0.04 * u, 360, 800)
 
@@ -277,27 +296,37 @@ def s06(t, u, T):
 def s07(t, u, T):
     """Okafor: low angle, huge; hero tiny next to him"""
     img = pitch_set().filter(ImageFilter.GaussianBlur(2))
-    paste(img, okafor(mouth="flat"), 22, 300, 1400)
-    paste(img, hero(gloves=True), 9, 600, 1200)
+    G = 1220
+    shadow(img, 220, G, 300); shadow(img, 540, G, 260)
+    so = paste(img, okafor(mouth="flat", look=1), 14, 220, G)
+    sh_ = paste(img, hero(gloves=True, look=-1), 12, 540, G)
     d = ImageDraw.Draw(img)
-    # height ruler
-    d.line([(470, 520), (470, 1180)], fill=(255, 255, 255), width=4)
-    for y in range(520, 1181, 60):
-        d.line([(460, y), (480, y)], fill=(255, 255, 255), width=4)
-    pill(img, 300, 470, "OKAFOR · 12", (200, 160, 20), spring(t - T - 0.1, 13, 7), 32)
-    return cam(img, 1.06 - 0.06 * u, 360, 900)
+    top_o = G - so.height + 10 * 14 - 14   # top of the hair rows (sprite has a 10-row margin)
+    top_h = G - sh_.height + 10 * 12 - 12
+    for y, x0, x1 in ((top_o, 120, 690), (top_h, 380, 690)):
+        for x in range(x0, x1, 28):
+            d.line([(x, y), (x + 14, y)], fill=(255, 255, 255), width=4)
+    k = clamp((u - 0.35) / 0.2)
+    if k > 0:
+        d.line([(680, top_o), (680, top_o + (top_h - top_o) * k)], fill=C_Y, width=8)
+        if k >= 1:
+            pill(img, 600, (top_o + top_h) / 2, "+1 HEAD", (200, 160, 20), spring(t - T - 0.55 * LINES[6][1], 13, 7), 26)
+    pill(img, 220, top_o - 60, "OKAFOR · 12", (200, 160, 20), spring(t - T - 0.1, 13, 7), 30)
+    return cam(img, 1.04 - 0.04 * u, 360, 900)
 
 
 def s08(t, u, T):
     img = pitch_set()
     goal(img, 360, 820, 600, 300)
     # Dixon catches cleanly, chest height
-    paste(img, dixon(pose="ready"), 14, 360, 1180)
+    caught = u > 0.4
+    sp_d = paste(img, dixon(pose="catch" if caught else "ready"), 14, 360, 1180)
     k = clamp(u / 0.4)
-    bx, by = lerp(720, 380, k), lerp(500, 930, k)
-    paste(img, ball_sprite(), 10, bx, by)
+    gy = 1180 - sp_d.height + (10 + 13) * 14
+    bx, by = lerp(720, 366, k), lerp(500, gy + 30, k)
+    paste(img, ball_sprite(), 6, bx, by)
     if u > 0.4:
-        glow_ring(img, 380, 900, 80, 0.7)
+        glow_ring(img, 366, gy - 10, 80, 0.7)
     pill(img, 360, 1230, "DIXON · 0 MISTAKES", (40, 90, 200), spring(t - T - 0.3, 13, 7), 28)
     return cam(img, 1 + 0.05 * u, 360, 900)
 
@@ -314,15 +343,31 @@ def s10(t, u, T):
     """try-fail montage: balls fly past, counters"""
     img = pitch_set()
     goal(img, 360, 900, 620, 320)
-    phase = (u * 4) % 1
-    side = 1 if int(u * 4) % 2 else -1
+    ws = word_times(9)
+    sw = clamp((ws[6][1] - 0.04 - T) / LINES[9][1] + 0.005)      # caption "DAY THREE" starts here
+    if u < sw:
+        shot, phase = int(u / (sw / 2)), (u % (sw / 2)) / (sw / 2)
+    else:
+        v = (u - sw) / (1 - sw)
+        shot, phase = 2 + int(v * 2), (v * 2) % 1
+    shot = min(shot, 3)
+    side = 1 if shot % 2 else -1
     kx = 360 + side * 140 * ease_out(phase)
-    paste(img, hero(pose="dive" if phase > 0.3 else "ready", gloves=True), 11,
-          kx, 1000 - math.sin(clamp(phase) * math.pi) * 60, rot=0 if side > 0 else 0)
-    bx = lerp(360 - side * 50, 360 - side * 270, phase)
-    paste(img, ball_sprite(), 8, bx, lerp(1250, 780, phase))
-    day2 = u < 0.5
-    n = int(clamp(u / 0.5) * 9) if day2 else int(clamp((u - 0.5) / 0.4) * 7)
+    if phase > 0.3:
+        sp = big(hero(pose="reach", gloves=True, mouth="open"), 9).rotate(-90 if side > 0 else 90, expand=True, resample=Image.NEAREST)
+        ky = 860 - math.sin(clamp(phase) * math.pi) * 40
+        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
+    else:
+        paste(img, hero(pose="ready", gloves=True), 11, kx, 1000)
+    bk = clamp(phase / 0.8)
+    bx = lerp(360 - side * 40, 360 - side * 230, bk)
+    by = lerp(1380, 760, ease_out(bk))
+    paste(img, ball_sprite(), 6, bx, by)
+    if bk >= 1:
+        impact_lines(img, bx, by - 40, t - (phase - 0.8) * 0.5, t, 10)
+    day2 = u < sw
+    scored = bk >= 1
+    n = [[0, 4], [4, 9], [0, 3], [3, 7]][shot][1 if scored else 0]
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([200, 1100, 520, 1230], 18, fill=(16, 18, 36), outline=C_R, width=5)
     d.text((360, 1135), "DAY 2" if day2 else "DAY 3", font=font(800, 28), fill=(255, 255, 255), anchor="mm")
@@ -338,7 +383,7 @@ def s11(t, u, T):
     """day four: Mason's penalty — keeper's view, Mason runs up"""
     img = pitch_set()
     paste(img, mason(pose="run" if u > 0.3 else "stand", phase=t * 2.5, mouth="smile"), 9, 360, lerp(760, 820, u))
-    paste(img, ball_sprite(), 5, 380, 840)
+    paste(img, ball_sprite(), 3, 380, 840)
     paste(img, hero(view="back", pose="ready", gloves=True), 22, 330, 1600)
     pill(img, 600, 560, "DAY 4", (60, 60, 80), spring(t - T, 13, 7), 30)
     d = ImageDraw.Draw(img, "RGBA")
@@ -349,10 +394,15 @@ def s11(t, u, T):
 def s12(t, u, T):
     img = pitch_set()
     goal(img, 360, 860, 640, 330)
-    paste(img, hero(pose="dive", gloves=True), 13, lerp(360, 220, ease_out(u * 2)), 860)
-    paste(img, ball_sprite(), 9, 150, 690)
-    glow_ring(img, 160, 660, 110 + 40 * u, 0.9, (255, 255, 200))
-    speed_lines(img, t, 200, 700, n=24, a=120)
+    speed_lines(img, t, 250, 700, n=18, a=90, r0=300, r1=700)
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), 11).rotate(90, expand=True, resample=Image.NEAREST)
+    kx = lerp(430, 380, ease_out(u * 2))
+    ky = 700 - math.sin(clamp(u * 1.5) * math.pi) * 20
+    shadow(img, kx, 880, 380, 36, 70)
+    img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
+    gx = kx - sp.width / 2 + 75
+    glow_ring(img, gx - 60, ky, 90 + 40 * u, 0.9, (255, 255, 200))
+    paste(img, ball_sprite(), 6, gx - 60, ky + 40)
     pill(img, 360, 1150, "SAVED!", (40, 150, 80), spring(t - T - 0.05, 13, 7), 48)
     paste(img, coach(look=-1), 6, 620, 1250)
     img = flash(img, 0.7 * clamp(1 - u * 5))
@@ -381,7 +431,7 @@ def s13(t, u, T):
     return cam(img, 1, 360 + jx, 800)
 
 
-def home_call(t, u, mouth="smile"):
+def home_call(t, u, mouth="smile", ui=True):
     img = Image.new("RGBA", (FW, FH), (20, 22, 40, 255))
     box = phone_frame(img, 360, 760, 500, 860)
     scr = Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), (226, 200, 170, 255))
@@ -391,15 +441,27 @@ def home_call(t, u, mouth="smile"):
     for x in range(0, W_, 40):
         sd.line([(x, 0), (x, H_ * 0.55)], fill=(200, 176, 146), width=4)
     sd.rectangle([30, 40, 150, 140], fill=(255, 236, 160), outline=OL, width=5)  # lamp-lit frame
-    # Mum behind
-    paste(scr, person(Kit((70, 108, 189), (45, 75, 140), (45, 75, 140)), hair="brown", style="pony", mouth="smile"), 8,
-          W_ - 90, int(H_ * 0.62))
     # armchair + Grandad big
     sd.rounded_rectangle([60, H_ * 0.45, W_ - 60, H_], 30, fill=(150, 46, 52), outline=OL, width=6)
     paste(scr, grandad(mouth=mouth, tube=True, blink=(u % 0.5) > 0.46), 16, W_ / 2, H_ + 120)
     paste(scr, cane(), 9, 60, H_ - 10)
+    # thin nasal cannula: under the nostrils, round both cheeks, over the ears
+    top = H_ + 120 - 39 * 16
+    ny = top + 14 * 16 + 10
+    ey = top + 12 * 16
+    cx = W_ / 2
+    # oxygen bottle beside the chair, tube runs up to his ears and under the nose
+    sd.rounded_rectangle([8, H_ - 330, 58, H_ - 160], 16, fill=(60, 170, 90), outline=OL, width=5)
+    sd.rectangle([22, H_ - 350, 44, H_ - 330], fill=(200, 200, 210), outline=OL, width=4)
+    sd.text((33, H_ - 245), "O2", font=font(800, 20), fill=(255, 255, 255), anchor="mm")
+    for sgn in (-1, 1):
+        pts = [(cx + sgn * 4, ny + 4), (cx + sgn * 30, ny + 10), (cx + sgn * 70, ny), (cx + sgn * 90, ey)]
+        sd.line(pts, fill=(150, 215, 250), width=4)
+    sd.line([(cx - 90, ey), (cx - 110, ey + 80), (33, H_ - 350)], fill=(150, 215, 250), width=4)
     img.alpha_composite(scr, (box[0], box[1]))
     d = ImageDraw.Draw(img)
+    if not ui:
+        return img
     d.rounded_rectangle([box[0] + 20, box[1] + 20, box[0] + 280, box[1] + 64], 12, fill=(16, 18, 36))
     d.text((box[0] + 150, box[1] + 42), "HOME · OUT OF HOSPITAL", font=font(800, 18), fill=C_G, anchor="mm")
     # small self view (hero)
@@ -410,15 +472,17 @@ def home_call(t, u, mouth="smile"):
 
 def s14(t, u, T):
     img = home_call(t, u, "smile")
-    if u > 0.45:
-        pill(img, 470, 900, "THINNER", (60, 60, 80), spring(t - T - 0.45 * LINES[13][1], 13, 7), 26)
     if u > 0.65:
-        pill(img, 250, 760, "OXYGEN TUBE", (40, 90, 200), spring(t - T - 0.65 * LINES[13][1], 13, 7), 24)
+        k = spring(t - T - 0.65 * LINES[13][1], 13, 7)
+        d = ImageDraw.Draw(img)
+        if k > 0.5:
+            d.line([(250, 1010), (352, 925)], fill=(255, 255, 255), width=5)
+        pill(img, 200, 1040, "OXYGEN", (40, 90, 200), k, 26)
     return cam(img, 1 + 0.06 * u, 360, 700)
 
 
 def s15(t, u, T):
-    img = home_call(t, u, "open" if int(t * 7) % 2 else "smile")
+    img = home_call(t, u, "open" if int(t * 7) % 2 else "smile", ui=u < 0.45)
     bubble(img, 330, 560, "I'LL BE THERE.\nSEAT 14.", spring(t - T - 0.8, 13, 7), 32)
     if u > 0.6:  # ticket
         k = spring(t - T - 0.6 * LINES[14][1], 13, 7)
@@ -435,20 +499,31 @@ def s16(t, u, T):
     """Friday: Okafor jumps for a cross and lands wrong"""
     img = pitch_set()
     goal(img, 360, 820, 600, 300)
-    pill(img, 360, 600, "FRIDAY", (60, 60, 80), spring(t - T, 13, 7), 30)
-    if u < 0.35:
-        k = u / 0.35
-        y = 1100 - math.sin(k * math.pi) * 260
-        paste(img, okafor(pose="celebrate"), 13, 360, y)
-        paste(img, ball_sprite(), 8, lerp(700, 380, k), lerp(600, 760, k))
+    pill(img, 130, 470, "FRIDAY", (60, 60, 80), spring(t - T, 13, 7), 30)
+    G = 1110
+    if u < 0.3:
+        k = u / 0.3
+        y = G - math.sin(k * math.pi) * 260
+        shadow(img, 360, G, 220 * (1 - 0.4 * math.sin(k * math.pi)))
+        paste(img, okafor(pose="celebrate"), 12, 360, y)
+        paste(img, ball_sprite(), 5, lerp(720, 380, k), lerp(560, y - 470, k))
+    elif u < 0.38:  # bad landing: knee buckles
+        shadow(img, 360, G, 220)
+        paste(img, okafor(pose="stand", mouth="open"), 12, 380, G, rot=-18)
+        paste(img, ball_sprite(), 5, 470, G - 10)
     else:
-        k = clamp((u - 0.35) / 0.2)
-        paste(img, okafor(pose="lying", blink=True, mouth="sad"), 12, 360, 1110)
-        if u < 0.6:
-            impact_lines(img, 360, 1060, T + 0.36 * LINES[15][1], t, 12)
+        rock = math.sin(t * 7) * 4
+        shadow(img, 360, G, 260)
+        paste(img, okafor(pose="hurt", blink=int(t * 3) % 3 == 0, mouth="open"), 12, 330, G + 60 + rock * 0.5, rot=-90)
+        bk = clamp((u - 0.38) / 0.5)
+        paste(img, ball_sprite(), 5, lerp(470, 700, ease_out(bk)), G - 10)
+        if int(t * 6) % 2:
+            glow_ring(img, 300, G - 60, 55, 0.7, (255, 60, 60))
+        if u < 0.55:
+            impact_lines(img, 360, G - 100, T + 0.3 * LINES[15][1], t, 12)
         pill(img, 360, 1210, "INJURED", (200, 40, 50), spring(t - T - 0.45 * LINES[15][1], 13, 7), 30)
-    img = flash(img, 0.45 * clamp(1 - abs(u - 0.37) * 10), (255, 40, 40))
-    return cam(img, 1.0 + 0.08 * u, 360, 950, *shake(t, T + 0.36 * LINES[15][1], .35, 14))
+    img = flash(img, 0.45 * clamp(1 - abs(u - 0.32) * 10), (255, 40, 40))
+    return cam(img, 1.0 + 0.08 * u, 360, 950, *shake(t, T + 0.3 * LINES[15][1], .35, 14))
 
 
 def team_sheet(img, u, cross_k, gk="?"):
@@ -472,6 +547,8 @@ def s17(t, u, T):
         k = spring(t - T - 0.55 * LINES[16][1], 13, 7)
         ov = Image.new("RGBA", img.size, (10, 12, 30, int(150 * clamp(k))))
         img.alpha_composite(ov)
+        if k > 0.2:
+            ImageDraw.Draw(img).rounded_rectangle([70, 490, 650, 900], 26, fill=(14, 16, 36), outline=(255, 255, 255), width=4)
         for x, sp, lab, c in ((220, dixon(), "DIXON", C_B), (500, hero(gloves=True), "YOU", C_G)):
             d = ImageDraw.Draw(img)
             w, h = 220 * k, 300 * k
@@ -493,13 +570,18 @@ def s17(t, u, T):
 
 def s18(t, u, T):
     img = pitch_set()
-    x = lerp(120, 330, ease_out(u * 1.6))
-    paste(img, coach(look=-1), 12, 470, 1130)
-    paste(img, mason(pose="whisper" if u > 0.6 else "run", phase=t * 2, mouth="smile", look=1), 12, x, 1130)
+    shadow(img, 630, 860, 90)
+    paste(img, hero(gloves=True, look=-1), 5, 630, 860)  # you, far away on the right, watching
+    pill(img, 630, 680, "YOU", (40, 150, 80), 1, 22)
+    x = lerp(-160, 300, clamp(u / 0.58))
+    shadow(img, 480, 1130, 260)
+    paste(img, coach(look=-1), 12, 480, 1130)
+    walking = u < 0.58
+    shadow(img, x, 1130, 260)
+    paste(img, mason(pose="run" if walking else "whisper", phase=t * 1.6, mouth="smile", look=1), 12, x,
+          1130 - (abs(math.sin(t * 1.6 * math.pi)) * 8 if walking else 0))
     if u > 0.62:
-        bubble(img, 360, 700, "psst...", spring(t - T - 0.62 * LINES[17][1], 13, 7), 32)
-    paste(img, hero(gloves=True, look=1), 6, 90, 980)  # hero far left, watching
-    pill(img, 90, 760, "YOU", (40, 150, 80), 1, 22)
+        bubble(img, 390, 520, "psst...", spring(t - T - 0.62 * LINES[17][1], 13, 7), 32)
     return cam(img, 1.02 + 0.06 * u, 400, 950)
 
 
@@ -532,8 +614,11 @@ def choice_cards(img, t, T0, sel=None):
                 d.ellipse([x + 10, y - 70, x + 22, y - 58], fill=C_Y)
                 paste(img, hero(look=-1), 5, x + 70, y + 40)
             else:
-                d.rectangle([x - 110, y - 10, x + 110, y + 16], fill=(150, 100, 60), outline=OL, width=5)  # bench
-                paste(img, hero(pose="sit", gloves=True), 5, x, y + 40)
+                for bx_ in (x - 96, x + 84):
+                    d.rectangle([bx_, y - 2, bx_ + 12, y + 44], fill=(110, 70, 40), outline=OL, width=4)   # bench legs
+                d.rectangle([x - 110, y - 16, x + 110, y - 2], fill=(150, 100, 60), outline=OL, width=5)  # seat
+                d.rectangle([x - 110, y + 44, x + 110, y + 48], fill=(60, 66, 110))  # floor line
+                paste(img, hero(pose="sit", gloves=True), 5, x, y + 44)
             d.text((x, y + 110), lab, font=font(800, 50), fill=c, anchor="mm", stroke_width=4, stroke_fill=OL)
             d.text((x, y + 165), sub, font=font(700, 20), fill=(220, 224, 240), anchor="mm")
 
@@ -550,18 +635,18 @@ def choice_bg():
 
 def s20(t, u, T):
     img = choice_bg()
-    choice_cards(img, t, T + 0.1)
+    choice_cards(img, t, T - 0.35)
     return cam(img, 1.0 + 0.03 * u, 360, 760)
 
 
 def typing_box(img, t, T0):
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([90, 470, 630, 540], 18, fill=(16, 18, 36), outline=(255, 255, 255), width=3)
+    d.rounded_rectangle([90, 452, 630, 522], 18, fill=(16, 18, 36), outline=(255, 255, 255), width=3)
     words = ["ASK", "WAIT"]
     k = (t - T0) / 1.2
-    w = words[int(k) % 2]
-    n = int(len(w) * clamp((k % 1) * 2))
-    d.text((120, 505), w[:n] + ("|" if int(t * 4) % 2 else ""), font=font(800, 30), fill=(255, 255, 255), anchor="lm")
+    w = words[min(1, int(k))]
+    n = int(len(w) * clamp((k - min(1, int(k))) * 2)) if k < 2 else len(w)
+    d.text((120, 487), w[:n] + ("|" if int(t * 4) % 2 else ""), font=font(800, 30), fill=(255, 255, 255), anchor="lm")
 
 
 def s21(t, u, T):
@@ -573,12 +658,13 @@ def s21(t, u, T):
 
 
 def s22(t, u, T):
-    img = choice_bg()
+    img = s21(t, 1.0, STARTS[20])
+    img = Image.blend(img.convert("RGB"), Image.new("RGB", img.size, (10, 12, 30)), 0.5 * clamp((t - T) / 0.3)).convert("RGBA")
     d = ImageDraw.Draw(img)
     k = spring(t - T, 11, 6)
     py = lerp(1400, 420, clamp(k, 0, 1.2))
     d.rounded_rectangle([60, py, 660, py + 560], 34, fill=(14, 18, 44), outline=C_Y, width=6)
-    paste(img, hero(mouth="smile", gloves=True), 9, 180, py + 330)
+    paste(img, hero(mouth="smile", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 180, py + 330 - abs(math.sin(t * 3)) * 8)
     d.text((440, py + 90), "DON'T MISS", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
     d.text((440, py + 150), "EP. 6", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
     tap = T + 1.4
@@ -593,14 +679,15 @@ def s22(t, u, T):
     if after and t < tap + 0.5:
         glow_ring(img, bx, by, 60 + 300 * (t - tap), 0.8 * (1 - (t - tap) / 0.5), C_Y)
     if t < tap + 0.4:  # Grandad's orange glove taps it
-        gx = lerp(700, bx + 120, ease_in_out((t - T) / 1.4))
-        gy = lerp(1300, by, ease_in_out((t - T) / 1.4))
+        gx = lerp(760, bx + 100, ease_in_out((t - T) / 1.4))
+        gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 1.4))
         d.rounded_rectangle([gx - 40, gy, gx + 40, gy + 90], 18, fill=(252, 140, 27), outline=OL, width=5)
         d.rounded_rectangle([gx - 12, gy - 40, gx + 12, gy + 20], 10, fill=(252, 140, 27), outline=OL, width=5)
         d.rectangle([gx - 40, gy + 90, gx + 40, gy + 104], fill=(225, 30, 40), outline=OL, width=3)
     for x, lab, c in ((230, "ASK", C_O), (490, "WAIT", C_B)):
-        d.rounded_rectangle([x - 100, py + 400, x + 100, py + 470], 18, fill=(30, 36, 76), outline=c, width=5)
-        d.text((x, py + 435), lab, font=font(800, 36), fill=c, anchor="mm")
+        hop = 5 * math.sin(t * 5 + x)
+        d.rounded_rectangle([x - 100, py + 400 - hop, x + 100, py + 470 - hop], 18, fill=(30, 36, 76), outline=c, width=5)
+        d.text((x, py + 435 - hop), lab, font=font(800, 36), fill=c, anchor="mm")
     d.text((360, py + 520), "VOTE IN THE COMMENTS", font=font(800, 28), fill=(255, 255, 255), anchor="mm")
     return img
 
