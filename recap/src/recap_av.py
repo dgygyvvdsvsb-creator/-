@@ -42,7 +42,8 @@ for k in range(6): pop(S[15]+0.05+k*0.28)
 whoosh(S[16]); pop(S[16]+1.2,2)
 env_v=np.convolve(np.abs(np.pad(v,(0,max(0,N-len(v))))[:N]),np.ones(2205)/2205,"same")
 out*=1-0.55*np.clip(env_v/0.05,0,1)
-out[:len(v)]+=v[:N]
+if os.environ.get("NOVOICE") != "1":
+    out[:len(v)]+=v[:N]
 out[-int(.4*sr):]*=np.linspace(1,0,int(.4*sr))
 out/=max(1,np.abs(out).max()/0.95)
 w=wave.open(f"recap_mix_{P}.wav","wb");w.setnchannels(1);w.setsampwidth(2);w.setframerate(sr);w.writeframes((out*32767).astype(np.int16).tobytes());w.close()
@@ -55,5 +56,5 @@ def work(i):
 if __name__=="__main__":
     with Pool(4) as pool: list(pool.imap_unordered(work,range(NF),chunksize=8))
     subprocess.run(["ffmpeg","-v","error","-y","-framerate","30","-i",f"{D}/%05d.png","-i",f"recap_mix_{P}.wav","-map","0:v","-map","1:a",
-      "-c:v","libx264","-preset","medium","-crf","18","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-ac","2","-shortest","-movflags","+faststart",f"START_HERE_{P}.mp4"],check=True)
+      "-c:v","libx264","-preset","medium","-crf","18","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-ac","2","-shortest","-movflags","+faststart",f"START_HERE_{P}" + ("_novoice" if os.environ.get("NOVOICE") == "1" else "") + ".mp4"],check=True)
     print(P,"done")

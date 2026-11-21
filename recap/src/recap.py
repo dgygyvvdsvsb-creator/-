@@ -103,7 +103,7 @@ def glove_pair(img, x, y, sc=1.0):
 def dive(img, x0, GL, side, phase, scale=8, ball_to=None, catch=False):
     """keeper: ready (0-.2) -> airborne parabola (.2-.7) -> lands flat on the grass (.7-1).
     returns glove position. side +1 = dives to screen right."""
-    D = 170
+    D = 120
     if phase < 0.2:
         shadow(img, x0, GL, 200)
         sp = paste(img, hero(pose="ready", gloves=True), scale, x0, GL)
@@ -184,7 +184,7 @@ def r_dives(t, u, T):
     side = 1 if k % 2 else -1
     gx, gy = dive(img, 360, GL, side, phase)
     if phase < 0.45:   # ball flying to where the gloves will be
-        tx, ty = 360 + side * 230, GL - 150
+        tx, ty = 360 + side * 200, GL - 150
         bp = clamp(phase / 0.45)
         draw_ball_s(img, lerp(360 - side * 60, tx, bp), lerp(1320, ty, bp), 5)
     else:              # caught: ball stays in the gloves, through the landing
@@ -201,19 +201,17 @@ def r_dives(t, u, T):
 
 def r_wrong(t, u, T):
     img = pitch_set()
-    GL = 1000
+    GL = 1040
     goal(img, 360, GL, 600, 300)
-    sp = big(hero(pose="reach", gloves=True, mouth="open"), 8).rotate(-90, expand=True, resample=Image.NEAREST)
-    kx = lerp(360, 520, ease_out(u * 2))
-    img.alpha_composite(sp, (int(kx - sp.width / 2), int(GL - 150 - sp.height / 2)))
-    k = clamp(u / 0.45)
-    bx, by = lerp(380, 170, k), lerp(1300, GL - 170, k)
-    draw_ball_s(img, bx, by, 5)
+    dive(img, 360, GL, 1, clamp(u * 1.1))          # dives RIGHT and lands
+    k = clamp((u - 0.1) / 0.4)
+    bx, by = lerp(380, 160, k), lerp(1320, GL - 170, k)
+    draw_ball_s(img, bx, by, 5)                    # ball goes LEFT into the net
     if k >= 1:
-        impact_lines(img, bx, by - 30, T + 0.45 * (RV[5][1] - RV[5][0] + 0.4), t, 12)
-        pill(img, 360, 520, "GOAL · 0-1", (200, 40, 50), spring(t - T - 0.45 * 1.5, 13, 7), 36)
-    img = flash(img, 0.4 * clamp(1 - abs(u - 0.47) * 10), (255, 50, 50))
-    return cam(img, 1.03, 360, 820, *shake(t, T + 0.45 * 1.5, .3, 12))
+        impact_lines(img, bx, by - 30, T + 0.5 * (RSTARTS[6] - T), t, 12)
+        pill(img, 360, 520, "GOAL · 0-1", (200, 40, 50), spring(t - T - 0.5 * (RSTARTS[6] - T), 13, 7), 36)
+    img = flash(img, 0.4 * clamp(1 - abs(u - 0.5) * 10), (255, 50, 50))
+    return cam(img, 1.03, 360, 860, *shake(t, T + 0.5 * (RSTARTS[6] - T), .3, 12))
 
 
 def r_collapse(t, u, T):
@@ -269,37 +267,57 @@ def r_choice(t, u, T):
 def r_twelve(t, u, T):
     img = pitch_set()
     kits = [(246, 206, 40), (60, 120, 210), (210, 52, 56), (130, 60, 170), (240, 140, 40), (240, 240, 245)]
-    for i in range(12):
-        x = 50 + i * 56
-        row = i % 2
-        y = 1020 + row * 70
+    # two rows of six, back row smaller and higher, staggered: every face stays visible
+    order = list(range(12))
+    pos = {}
+    for i in order:
+        row = 0 if i < 6 else 1               # 0 = back row
+        col = i % 6
+        if row == 0:
+            pos[i] = (118 + col * 97, 960, 4)
+        else:
+            pos[i] = (70 + col * 116, 1170, 5)
+    for i in order:                            # back row first, front row on top
+        x, y, sc = pos[i]
         sk = ["light", "tan", "brown", "dark"][i % 4]
-        if i == 7:
+        if i == 8:
             sp = hero(gloves=True)
         else:
-            sp = person(Kit(kits[i % 6], (30, 30, 40), kits[i % 6], i + 1), skin=sk, hair=["dark", "blond", "black", "ginger"][i % 4],
-                        style=["short", "spiky", "curly", "short"][i % 4], gloves=True)
-        shadow(img, x, y, 60)
-        paste(img, sp, 5, x, y + math.sin(t * 4 + i) * 2)
+            sp = person(Kit(kits[i % 6], (30, 30, 40), kits[i % 6], [1,2,3,4,5,6,7,8,0,9,4,6][i]), skin=sk, hair=["dark", "blond", "black", "ginger"][i % 4],
+                        style=["short", "spiky", "curly", "short"][i % 4], gloves=False)
+        shadow(img, x, y, 70 if sc == 4 else 90)
+        paste(img, sp, sc, x, y + math.sin(t * 4 + i) * 2)
     pill(img, 360, 560, "12 KEEPERS · 1 PLACE", (60, 60, 80), spring(t - T, 13, 7), 32)
     k = clamp((u - 0.4) / 0.3)
     if k > 0:
-        glow_ring(img, 50 + 7 * 56, 1020 + 70 - 90, 70, 0.7 * k, C_Y)
-    return cam(img, 1 + 0.08 * u, 400, 1000)
+        glow_ring(img, pos[8][0], pos[8][1] - 110, 80, 0.7 * k, C_Y)
+    return cam(img, 1 + 0.03 * u, 360, 1060)
 
 
 def r_signed(t, u, T):
-    img = reuse(11, min(1, u * 1.6))
+    img = pitch_set()
+    GL = 1040
+    goal(img, 360, GL, 600, 300)
+    phase = clamp(u * 1.25)
+    gx, gy = dive(img, 360, GL, 1, phase)
+    if phase < 0.45:
+        bp = clamp(phase / 0.45)
+        draw_ball_s(img, lerp(380, 360 + 200, bp), lerp(1320, GL - 150, bp), 5)
+    else:
+        draw_ball_s(img, gx, gy + 34, 5)
+        if phase < 0.6:
+            glow_ring(img, gx, gy, 70, 0.7, (255, 255, 200))
+    shadow(img, 620, 1250, 90)
+    paste(img, coach(look=-1), 5, 620, 1250)
     if u > 0.55:
-        img = img.convert("RGBA")
-        k = spring(t - T - 0.55 * 3, 13, 7)
+        k = spring(t - T - 0.55 * (RSTARTS[10] - T), 13, 7)
         d = ImageDraw.Draw(img)
         w, h = 420 * k, 200 * k
         d.rounded_rectangle([360 - w / 2, 560 - h / 2, 360 + w / 2, 560 + h / 2], 18, fill=(250, 246, 236), outline=OL, width=6)
         if k > 0.6:
             d.text((360, 520), "RIVERSIDE ACADEMY", font=font(800, 26), fill=(30, 40, 80), anchor="mm")
-            d.text((360, 590), "SIGNED ✓".replace("✓", ""), font=font(800, 52), fill=(40, 150, 80), anchor="mm")
-    return img
+            d.text((360, 590), "SIGNED", font=font(800, 52), fill=(40, 150, 80), anchor="mm")
+    return cam(img, 1.02, 360, 900)
 
 
 def r_comments(t, u, T):
