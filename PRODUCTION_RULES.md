@@ -17,3 +17,21 @@
 - A new shot every ≤0.55 s in the hook: mid-dive → snap-zoom on the rival → boot hits the ball, ball flies at the camera → 0.3 s montage of the stakes (Grandad, scouts' message, ambulance lights, hero's face).
 - Hook caption fully readable on frame 0 (TikTok preview); key words take colour when spoken.
 - Never reveal the outcome in the hook (no LEFT/RIGHT labels, no "wrong side" hints).
+
+## VISUAL STYLE — from EP5 on ONLY this style (user decision)
+Reference: remi_sport "De zéro à champion du monde" EP7 (85 s).
+- Characters = tiny pixel sprites (~18x30 px) with a 1-px dark outline and ONE shadow tone (right side),
+  scaled up 6x–24x with NEAREST. Big in frame: mid shots ~1/4–1/2 of the width, close-ups fill the frame.
+  Dives/falls = the sprite rotated with NEAREST (jagged edges are part of the look).
+- Backgrounds simple, bright and smooth: sky gradient, blurred tree blobs, blurred pixel crowd, striped pitch,
+  clean flat interiors (white walls, checker floor, a few props). Action > clutter.
+- Football ACTION most of the time: matches, saves, tackles, injuries — diagonal compositions, camera close.
+- FX on every hit: glow ring, flash, speed/impact lines, red flash for injuries, slow-mo.
+- Pace: new shot every 2–3 s, caption chunk every ~1 s (Poppins ExtraBold ~50 px, white with thick outline,
+  key words coloured, unspoken words dim).
+- Story UI as devices: score bar ("1/4 2-0"), badges ("No 7 · 16"), white speech bubbles, scan screens,
+  letters/notifications, recovery bars, typing box + two choice cards with icons at the end.
+- Opening: previous vote result card (1 s) → straight into drama/action.
+- Ending: life choice with risk, two cards + typing box, "vote in the comments", FOLLOW / SUBSCRIBE card.
+- Our anchors stay: hero green #0 + red bracelet (right wrist) + Grandad's orange gloves; Grandad bald, white
+  side hair, glasses, white beard, brown cardigan, cane; Mason blond spiky, red #9; banner "EP. N · FROM ZERO TO LEGEND".
