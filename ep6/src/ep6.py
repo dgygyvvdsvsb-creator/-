@@ -16,8 +16,8 @@ LINES = [
     [("YOU'RE", W), ("NOT", R_), ("NUMBER", W), ("ONE.", Y), ("NOT", W), ("YET.", G)],
     [("WEDNESDAY.", W), ("OKAFOR'S", Y), ("STILL", W), ("INJURED.", R_)],
     [("SO", W), ("YOU", G), ("START.", G), ("FIRST", Y), ("TEAM.", Y)],
-    [("MINUTE", W), ("THREE.", W), ("THEIR", W), ("STRIKER.", B), ("LOW", W), ("AND", W), ("HARD.", R_)],
-    [("THROUGH", W), ("YOUR", W), ("LEGS.", R_), ("ZERO,", W), ("ONE.", R_)],
+    [("MINUTE", W), ("THREE.", W), ("ONE", W), ("PASS.", B), ("ONE", W), ("TOUCH.", B)],
+    [("YOU", W), ("FLY...", Y), ("NOT", R_), ("ENOUGH.", R_), ("ZERO,", W), ("ONE.", R_)],
     [("MASON", R_), ("LAUGHS.", W), ("\"TOLD", W), ("YOU.\"", R_)],
     [("YOU", W), ("GET", W), ("BACK", G), ("UP.", G), ("LIKE", W), ("GRANDAD", B), ("SAID.", W)],
     [("CORNER.", W), ("HEADER.", W), ("YOU", W), ("FLY.", Y), ("SAVED!", G)],
@@ -774,6 +774,73 @@ def _lin(keys, v):
     return keys[-1][1]
 
 
+def shot_reverse(t, w, t_hit):
+    """EPIC: camera behind our net, low. Keeper's back fills the frame, #9 strikes,
+    the ball comes at us in slow motion between his legs and bulges the net."""
+    c = Cam(camX=0.6, camH=1.05, hor=600)
+    img = backdrop(600, stadium=True)
+    pitch_persp(img, c, None)
+    d = ImageDraw.Draw(img)
+    for (X0, Z0, X1, Z1) in ((-30, 4.3, 30, 4.3), (-6, 4.3, -6, 8.3), (6, 4.3, 6, 8.3), (-6, 8.3, 6, 8.3), (-14, 15.3, 14, 15.3)):
+        pts = [c.p(lerp(X0, X1, i / 20), lerp(Z0, Z1, i / 20)) for i in range(21)]
+        d.line(pts, fill=LINE, width=max(2, int(0.07 * c.k((Z0 + Z1) / 2))))
+    kick = 0.18
+    # #9 strikes from the edge of the box
+    ground_shadow(img, c, 1.3, 11.0, 0.4)
+    sprite_at(img, c, opp(9, pose="kick" if w > kick - 0.08 else "run", phase=clamp((w - kick + 0.08) / 0.1) if w > kick - 0.08 else t * 2.6), 1.3, 11.0, height_m=1.55)
+    # slow motion: the ball travels its path slowly, fast again at the end
+    a = 0.0 if w < kick else clamp(((w - kick) / (0.72 - kick)) ** 1.6)
+    path = arc((1.0, 10.7, 0.1), (0.0, 2.6, 0.22), apex=0.12)
+    if a < 1:
+        dotted_path(img, c, path, 1.0, from_=a)
+    # keeper: back view, legs apart, on the goal line between the posts
+    ground_shadow(img, c, 0, 4.6, 0.5)
+    ball_first = at(path, a)[1] > 4.6
+    if ball_first and a > 0:
+        ball_trail(img, c, path, a, 0.1)
+        ball_at(img, c, *at(path, a))
+    sprite_at(img, c, hero(view="back", pose="ready", gloves=True), 0, 4.6, height_m=1.6)
+    if not ball_first and a < 0.97:
+        ball_trail(img, c, path, a, 0.1)
+        bx, by = ball_at(img, c, *at(path, min(a, 0.97)), shadow_=False)
+    # goal frame around us (we are behind the net)
+    pl, pr = c.p(-2.5, 4.3), c.p(2.5, 4.3)
+    tl, tr = c.p(-2.5, 4.3, 2.0), c.p(2.5, 4.3, 2.0)
+    for a_, b_ in ((pl, tl), (pr, tr), (tl, tr)):
+        d = ImageDraw.Draw(img)
+        d.line([a_, b_], fill=OL, width=30); d.line([a_, b_], fill=(250, 250, 252), width=22)
+    bul = None
+    if a >= 0.97:
+        bul = (*c.p(0.0, 2.6, 0.22), clamp((w - 0.72) / 0.06))
+    import build as _b
+    net = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    nd = ImageDraw.Draw(net)
+    cell = 46
+
+    def disp(x, y):
+        if not bul:
+            return x, y
+        bx_, by_, k = bul
+        dx, dy = x - bx_, y - by_
+        r = math.hypot(dx, dy) + 1e-3
+        f = k * 70 * math.exp(-(r / 230) ** 2)
+        return x - dx / r * f * 0.2, y - dy / r * f * 0.2 + f * 0.4
+    for kk in range(-30, 50):
+        p1 = [disp(kk * cell + j * cell, j * cell) for j in range(-2, 32)]
+        p2 = [disp(kk * cell - j * cell, j * cell) for j in range(-2, 32)]
+        nd.line(p1, fill=(240, 244, 250, 90), width=3)
+        nd.line(p2, fill=(240, 244, 250, 90), width=3)
+    img.alpha_composite(net)
+    if bul:
+        draw_ball(img, bul[0], bul[1] + 50, 3.2)
+        impact_lines(img, bul[0], bul[1], t_hit, t, 14)
+    slowmo_bars(img, 1.0 if 0.1 < w < 0.75 else 0.0)
+    img = flash(img, 0.45 * clamp(1 - abs(w - 0.75) * 10), (255, 50, 50))
+    mini_score(img, t, "3'")
+    zoom = 1.0 + 0.12 * ease_in_out(clamp(w / 0.7))
+    return cam(img, zoom, 330, 820, *shake(t, t_hit, .35, 14))
+
+
 def s_attack(t, u, T):
     """lines 7+8 as ONE continuous move: one-two around our two defenders, low shot through your legs, goal"""
     A0, A1 = STARTS[7], STARTS[9]
@@ -785,8 +852,8 @@ def s_attack(t, u, T):
     d4 = [(0.0, (-0.9, 14.0)), (0.45, (-1.1, 12.9)), (0.6, (-1.6, 12.4)), (1.0, (-1.7, 12.0))]     # beaten by the one-two
     d5 = [(0.0, (1.4, 14.0)), (0.30, (1.6, 12.6)), (0.38, (2.0, 12.3)), (1.0, (2.4, 11.9))]        # beaten by the dribble
     # ball: with #7 -> pass to #9 -> dribble -> back to #7 -> through ball to #9 -> shot
-    b7 = lambda vv: (_lin(p7, vv)[0] + 0.35, _lin(p7, vv)[1] + 0.5)
-    b9 = lambda vv: (_lin(p9, vv)[0] - 0.3, _lin(p9, vv)[1] + 0.5)
+    b7 = lambda vv: (_lin(p7, vv)[0] + 0.42, _lin(p7, vv)[1] + 0.15)
+    b9 = lambda vv: (_lin(p9, vv)[0] - 0.42, _lin(p9, vv)[1] + 0.15)
     passes = [(0.17, 0.25, b7, b9), (0.42, 0.50, b9, b7), (0.53, 0.60, b7, b9)]
     owner = None
     ball = None
@@ -805,6 +872,8 @@ def s_attack(t, u, T):
     elif v < vs:
         ball = b9(v)
     shot = arc((b9(vs)[0], b9(vs)[1], 0.1), (0.05, GZ + 0.6, 0.18), apex=0.05)
+    if vs - 0.05 <= v < vs + 0.24:
+        return shot_reverse(t, (v - (vs - 0.05)) / 0.29, A0 + (vs + 0.13) * (A1 - A0))
     # camera follows the move
     cz = lerp(0.0, 7.0, ease_in_out(clamp(v / vs)))
     cx = lerp(0.0, 0.5, clamp(v / vs))
@@ -870,7 +939,17 @@ def s_attack(t, u, T):
     return cam(img, zoom, kx, ky, *shake(t, A0 + (vs + 0.12) * (A1 - A0), .3, 10))
 
 
-SCENES = [s_hook, s_knock, s_coach, s_training, s_notyet, s_okafor, s_walkout, s_attack, s_attack, s_mason, s_getup,
+def s_attackA(t, u, T):
+    """lines 7+8: pass, first-time curler into the top corner, full-stretch dive falls short"""
+    import attack2
+    A0, A1 = STARTS[7], STARTS[9]
+    w = clamp((t - A0) / (A1 - A0))
+    img = attack2.variant_A(t, w).convert("RGBA")
+    mini_score(img, t, "3'")
+    return img
+
+
+SCENES = [s_hook, s_knock, s_coach, s_training, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
           s_header, s_1v1, s_mason_goal, s_board, s_fk, s_slowmo, s_finger, s_whistle, s_pen, s_choice, s_end]
 
 

@@ -341,3 +341,36 @@ def ball_trail(img, cam, pts, a, length=0.12, n=4):
             d.line([(lerp(sx, ex, f0), lerp(sy, ey, f0)), (lerp(sx, ex, f1), lerp(sy, ey, f1))],
                    fill=(255, 255, 255, int(170 * (1 - f0))), width=max(1, int(r * 0.35 * (1 - f0))))
     img.alpha_composite(ov)
+
+
+def pretty_arc(img, cam, pts, upto=1.0, from_=0.0, col=(255, 214, 60)):
+    """smooth glowing shot curve: soft glow + dark edge + bright core, tapering with distance, arrow head at the end"""
+    n = 120
+    sp = [cam.p(*at(pts, lerp(from_, upto, i / n))) for i in range(n + 1)]
+    zs = [at(pts, lerp(from_, upto, i / n))[1] for i in range(n + 1)]
+    if len(sp) < 2:
+        return
+    wid = [clamp(0.06 * cam.k(z), 4, 14) for z in zs]
+    glow_l = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow_l)
+    for i in range(n):
+        gd.line([sp[i], sp[i + 1]], fill=col + (150,), width=int(wid[i] * 3.2))
+    img.alpha_composite(glow_l.filter(ImageFilter.GaussianBlur(9)))
+    d = ImageDraw.Draw(img)
+    for i in range(n):
+        d.line([sp[i], sp[i + 1]], fill=OL, width=int(wid[i] + 6))
+    for i in range(n):
+        d.line([sp[i], sp[i + 1]], fill=col, width=int(wid[i]))
+    for i in range(n):
+        d.line([sp[i], sp[i + 1]], fill=(255, 250, 220), width=max(1, int(wid[i] * 0.35)))
+    for i in range(n + 1):   # round joints
+        r = wid[i] / 2
+        d.ellipse([sp[i][0] - r, sp[i][1] - r, sp[i][0] + r, sp[i][1] + r], fill=col)
+    if upto >= 0.999:   # arrow head at the target
+        (x0, y0), (x1, y1) = sp[-6], sp[-1]
+        ang = math.atan2(y1 - y0, x1 - x0)
+        hs = wid[-1] * 2.6 + 10
+        tri = [(x1 + math.cos(ang) * hs * 0.6, y1 + math.sin(ang) * hs * 0.6),
+               (x1 + math.cos(ang + 2.5) * hs, y1 + math.sin(ang + 2.5) * hs),
+               (x1 + math.cos(ang - 2.5) * hs, y1 + math.sin(ang - 2.5) * hs)]
+        d.polygon(tri, fill=col, outline=OL, width=4)
