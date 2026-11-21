@@ -28,11 +28,8 @@ LINES = [
     ([("THE", W), ("COACH", W), ("CROSSES", R_), ("OUT", R_), ("HIS", W), ("NAME.", W), ("DIXON...", B), ("OR", W), ("YOU.", G)], 4.1),
     ([("THEN", W), ("MASON", R_), ("WALKS", W), ("TO", W), ("THE", W), ("COACH.", W), ("AND", W), ("WHISPERS.", R_)], 3.5),
     ([("THE", W), ("COACH", W), ("LOOKS", W), ("AT", W), ("YOU.", G), ("WRITES", W), ("NOTHING.", Y)], 3.1),
-    ([("DO", W), ("YOU", W), ("KNOCK", O), ("ON", W), ("HIS", W), ("DOOR", W), ("AND", W), ("ASK", O), ("FOR", W), ("THE", W),
-      ("SHIRT?", Y), ("OR", W), ("WAIT", B), ("YOUR", W), ("TURN?", B)], 6.0),
-    ([("VOTE", W), ("ASK", O), ("OR", W), ("WAIT", B), ("IN", W), ("THE", W), ("COMMENTS.", G)], 3.0),
-    ([("FOLLOW" if PLATFORM != "youtube" else "SUBSCRIBE", R_), ("TO", W), ("FIND", W), ("OUT", W), ("WHAT", W),
-      ("MASON", R_), ("SAID.", W)], 3.4),
+    ([("ASK", O), ("FOR", W), ("THE", W), ("SHIRT?", Y), ("OR", W), ("WAIT?", B)], 2.3),
+    ([("VOTE", W), ("BELOW.", G), ("FOLLOW" if PLATFORM != "youtube" else "SUBSCRIBE", R_), ("FOR", W), ("EP.\u00a06.", Y)], 2.6),
 ]
 GAP = 0.0
 STARTS = []
@@ -40,7 +37,7 @@ _t = 0.15
 for words, dur in LINES:
     STARTS.append(_t)
     _t += dur
-TOTAL = _t + 0.6
+TOTAL = _t + 0.3
 
 
 def word_times(i):
@@ -675,16 +672,17 @@ def s21(t, u, T):
 
 
 def s22(t, u, T):
-    img = s21(t, 1.0, STARTS[20])
+    img = choice_bg()
+    choice_cards(img, t, T - 10)
     img = Image.blend(img.convert("RGB"), Image.new("RGB", img.size, (10, 12, 30)), 0.5 * clamp((t - T) / 0.3)).convert("RGBA")
     d = ImageDraw.Draw(img)
-    k = spring(t - T, 11, 6)
+    k = spring(t - T, 16, 7)
     py = lerp(1400, 420, clamp(k, 0, 1.2))
     d.rounded_rectangle([60, py, 660, py + 560], 34, fill=(14, 18, 44), outline=C_Y, width=6)
     paste(img, hero(mouth="smile", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 180, py + 330 - abs(math.sin(t * 3)) * 8)
     d.text((440, py + 90), "DON'T MISS", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
     d.text((440, py + 150), "EP. 6", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
-    tap = T + 1.4
+    tap = T + 0.8
     after = t > tap
     label = ("SUBSCRIBED" if after else "SUBSCRIBE") if PLATFORM == "youtube" else ("FOLLOWING" if after else "+ FOLLOW")
     pul = 1 + (0.05 * math.sin(t * 9) if not after else 0)
@@ -696,8 +694,8 @@ def s22(t, u, T):
     if after and t < tap + 0.5:
         glow_ring(img, bx, by, 60 + 300 * (t - tap), 0.8 * (1 - (t - tap) / 0.5), C_Y)
     if t < tap + 0.4:  # Grandad's orange glove taps it
-        gx = lerp(760, bx + 100, ease_in_out((t - T) / 1.4))
-        gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 1.4))
+        gx = lerp(760, bx + 100, ease_in_out((t - T) / 0.8))
+        gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
         d.rounded_rectangle([gx - 40, gy, gx + 40, gy + 90], 18, fill=(252, 140, 27), outline=OL, width=5)
         d.rounded_rectangle([gx - 12, gy - 40, gx + 12, gy + 20], 10, fill=(252, 140, 27), outline=OL, width=5)
         d.rectangle([gx - 40, gy + 90, gx + 40, gy + 104], fill=(225, 30, 40), outline=OL, width=3)
@@ -709,7 +707,7 @@ def s22(t, u, T):
     return img
 
 
-SCENES = [s01, s02, s03, s04, s05, s06, s07, s08, s09, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22]
+SCENES = [s01, s02, s03, s04, s05, s06, s07, s08, s09, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s22]
 
 
 def frame(t):
