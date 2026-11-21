@@ -101,7 +101,7 @@ def score_state(t):
 def mini_score(img, t, minute):
     l, r = score_state(t)
     d = ImageDraw.Draw(img)
-    y = 252
+    y = 290
     d.rounded_rectangle([200, y, 520, y + 56], 12, fill=(14, 16, 30), outline=OL, width=4)
     d.rectangle([212, y + 12, 236, y + 44], fill=RS); d.rectangle([484, y + 12, 508, y + 44], fill=NF)
     d.text((360, y + 28), f"RIV  {l} - {r}  NOR", font=font(800, 26), fill=(255, 255, 255), anchor="mm")
@@ -422,31 +422,31 @@ def s_getup(t, u, T):
     """close, low: you lie in the net... and get back up"""
     c = Cam(camX=0, camH=1.6, hor=470)
     img = backdrop(470, stadium=True)
-    pitch_persp(img, c, Zgoal=6.5)
-    goal3d(img, c, 6.5)
+    pitch_persp(img, c, Zgoal=10.0)
+    goal3d(img, c, 10.0)
     if u < 0.45:
-        draw_ball(img, *c.p(1.2, 7.4, 0), 1.0)
-        sp_s = 1.6 * c.k(6.4) / 31
+        draw_ball(img, *c.p(1.2, 10.9, 0), 1.0)
+        sp_s = 1.6 * c.k(9.9) / 31
         sp = hero(pose="reach", gloves=True, blink=True).resize((int(24 * sp_s), int(39 * sp_s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
-        x, y = c.p(0.2, 6.4)
+        x, y = c.p(0.2, 9.9)
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * sp_s)))
     else:
-        ground_shadow(img, c, 0, 6.4, 0.5)
+        ground_shadow(img, c, 0, 9.9, 0.5)
         k = ease_out((u - 0.45) / 0.25)
-        sprite_at(img, c, hero(gloves=True, mouth="flat"), 0, 6.4, Y=-0.4 * (1 - k), height_m=1.6)
-        draw_ball(img, *c.p(1.2, 7.4, 0), 1.0)
-        glow_ring(img, *c.p(0, 6.4, 1.0), 120 * k, 0.4 * k, (255, 240, 180))
+        sprite_at(img, c, hero(gloves=True, mouth="flat"), 0, 9.9, Y=-0.4 * (1 - k), height_m=1.6)
+        draw_ball(img, *c.p(1.2, 10.9, 0), 1.0)
+        glow_ring(img, *c.p(0, 9.9, 1.0), 120 * k, 0.4 * k, (255, 240, 180))
     return cam(img, 1 + 0.05 * u, 360, 900)
 
 
 def s_header(t, u, T):
     img, c = shooter_view(t, 11, camX=-0.5, camH=2.2, hor=470)
     goal3d(img, c, 11)
-    cross = arc((-14, 9.5, 0.3), (0.4, 8.2, 2.0), apex=3.5)
-    head = arc((0.4, 8.2, 2.0), (-2.0, 11.0, 1.7), apex=0.3)
+    cross = arc((-14, 9.5, 0.3), (1.8, 8.6, 2.0), apex=3.5)
+    head = arc((1.8, 8.6, 2.0), (-2.0, 11.0, 1.7), apex=0.3)
     jump = math.sin(clamp((u - 0.25) / 0.35) * math.pi) * 0.55
-    ground_shadow(img, c, 0.4, 8.2, 0.35)
-    sprite_at(img, c, opp(5, view="back", pose="celebrate" if jump > 0.1 else "stand"), 0.4, 8.2, Y=jump, height_m=1.55)
+    ground_shadow(img, c, 1.8, 8.6, 0.35)
+    sprite_at(img, c, opp(5, view="back", pose="celebrate" if jump > 0.1 else "stand"), 1.8, 8.6, Y=jump, height_m=1.55)
     phase = clamp((u - 0.38) / 0.62)
     gx, gy = keeper_world(img, c, 0, 11, -1, phase)
     if u < 0.4:
@@ -458,7 +458,7 @@ def s_header(t, u, T):
         a = clamp((u - 0.4) / 0.25)
         ball_trail(img, c, head, a, 0.25)
         ball_at(img, c, *at(head, a))
-        impact_lines(img, *c.p(0.4, 8.2, 2.1), T + 0.4 * (STARTS[12] - T), t, 8)
+        impact_lines(img, *c.p(1.8, 8.6, 2.1), T + 0.4 * (STARTS[12] - T), t, 8)
     else:
         draw_ball(img, gx, gy + 12, 0.9)
         if phase < 0.6:
