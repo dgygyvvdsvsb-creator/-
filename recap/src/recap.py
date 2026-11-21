@@ -100,6 +100,26 @@ def glove_pair(img, x, y, sc=1.0):
         d.rectangle([x + dx - 15 * sc, y + 8 * sc, x + dx + 15 * sc, y + 18 * sc], fill=(206, 98, 14), outline=OL, width=3)
 
 
+def ball_into_net(img, x0, y0, x1, y1, GL, p, hit=0.6, size=5):
+    """0..hit: flight to (x1,y1) in the net; then gravity drop with two small bounces onto the grass at GL"""
+    if p < hit:
+        q = p / hit
+        draw_ball_s(img, lerp(x0, x1, q), lerp(y0, y1, q), size)
+        return False
+    q = (p - hit) / (1 - hit)
+    h0 = GL - y1
+    if q < 0.45:
+        y = y1 + h0 * (q / 0.45) ** 2
+    elif q < 0.7:
+        y = GL - h0 * 0.25 * math.sin((q - 0.45) / 0.25 * math.pi)
+    elif q < 0.85:
+        y = GL - h0 * 0.07 * math.sin((q - 0.7) / 0.15 * math.pi)
+    else:
+        y = GL
+    draw_ball_s(img, x1, y, size)
+    return True
+
+
 def dive(img, x0, GL, side, phase, scale=8, ball_to=None, catch=False):
     """keeper: ready (0-.2) -> airborne parabola (.2-.7) -> lands flat on the grass (.7-1).
     returns glove position. side +1 = dives to screen right."""
@@ -131,11 +151,10 @@ def r_zero_ten(t, u, T):
     n = min(10, k + 1)
     phase = (u * 10) % 1
     side = 1 if k % 2 else -1
-    for j in range(n - 1):   # balls already in the net
-        draw_ball_s(img, 150 + (j * 47) % 420, GL - 20 - (j % 3) * 14, 4)
+    for j in range(n - 1):   # balls already in the net, lying on the grass
+        draw_ball_s(img, 110 + (j * 53) % 500, GL - 4 - (j % 2) * 6, 4)
     dive(img, 360, GL, -side, phase)              # wrong way every time
-    bp = clamp(phase / 0.6)
-    draw_ball_s(img, lerp(360, 360 + side * 220, bp), lerp(1300, GL - 160, bp), 5)
+    ball_into_net(img, 360, 1300, 360 + side * 220, GL - 160, GL - 4, phase, 0.6, 5)
     score_bar(img, 1110, "YOU", "RIVERS", f"0 - {n if phase > 0.6 else n - 1}", "1ST MATCH")
     img = flash(img, 0.25 * clamp(1 - abs(phase - 0.62) * 12), (255, 60, 60))
     return cam(img, 1 + 0.04 * u, 360, 900)
@@ -155,10 +174,6 @@ def r_gloves(t, u, T):
     if 0 < k < 1:
         glow_ring(img, gx, gy, 60, 0.5, (255, 200, 120))
     glove_pair(img, gx, gy, 1.0)
-    # hands drawn over the gloves = holding them
-    d = ImageDraw.Draw(img)
-    hx, hy = (g if k < 0.5 else h)
-    d.rectangle([hx - 9, hy - 9, hx + 9, hy + 9], fill=SKIN["old" if k < 0.5 else "light"][0], outline=OL, width=3)
     if u > 0.6:
         pill(img, 360, 470, "2 SIZES TOO BIG", (200, 120, 20), spring(t - T - 0.6 * (RV[1][1] - RV[1][0]), 13, 7), 30)
     return cam(img, 1 + 0.05 * u, 360, 900)
@@ -204,9 +219,9 @@ def r_wrong(t, u, T):
     GL = 1040
     goal(img, 360, GL, 600, 300)
     dive(img, 360, GL, 1, clamp(u * 1.1))          # dives RIGHT and lands
+    bx, by = 160, GL - 170
     k = clamp((u - 0.1) / 0.4)
-    bx, by = lerp(380, 160, k), lerp(1320, GL - 170, k)
-    draw_ball_s(img, bx, by, 5)                    # ball goes LEFT into the net
+    ball_into_net(img, 380, 1320, bx, by, GL - 4, clamp((u - 0.1) / 0.9), 0.45, 5)   # ball goes LEFT into the net
     if k >= 1:
         impact_lines(img, bx, by - 30, T + 0.5 * (RSTARTS[6] - T), t, 12)
         pill(img, 360, 520, "GOAL · 0-1", (200, 40, 50), spring(t - T - 0.5 * (RSTARTS[6] - T), 13, 7), 36)
