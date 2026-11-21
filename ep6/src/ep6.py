@@ -205,12 +205,20 @@ def office(t):
 
 def desk_and_coach(img, t, look=0, talk=False, blink=False):
     """coach sits behind the desk: only his upper body shows above it"""
-    paste(img, coach(pose="sit", look=look, mouth="open" if talk else "flat", blink=blink), 16, 250, 1000)
+    bare = person(Kit((30, 40, 80), (30, 40, 80), (30, 30, 36)), skin="light", hair="grey", style="short",
+                  pose="sit", look=look, mouth="open" if talk else "flat", blink=blink)   # cap is off, on the desk
+    paste(img, bare, 16, 250, 1000)
     d = ImageDraw.Draw(img)
     d.rectangle([20, 820, 520, 1030], fill=(118, 78, 48), outline=OL, width=7)     # desk front, down to the floor
     d.rectangle([60, 860, 480, 990], outline=(96, 62, 38), width=5)                # panel detail
     d.rectangle([20, 800, 520, 830], fill=(140, 96, 60), outline=OL, width=6)      # desk top
-    d.rectangle([90, 782, 230, 804], fill=(250, 246, 236), outline=OL, width=3)    # papers
+    d.rectangle([200, 782, 290, 804], fill=(250, 246, 236), outline=OL, width=3)   # papers
+    # his cap on the desk, head-sized: crown dome + brim pointing at us
+    NAVY, NAVY_D = (34, 46, 96), (22, 30, 66)
+    d.chord([50, 736, 180, 832], 180, 360, fill=NAVY, outline=OL, width=4)
+    d.line([(115, 740), (115, 784)], fill=NAVY_D, width=3)
+    d.rectangle([106, 754, 124, 768], fill=(250, 206, 40), outline=OL, width=2)
+    d.chord([40, 772, 200, 812], 0, 180, fill=NAVY_D, outline=OL, width=4)
     d.rectangle([300, 770, 360, 804], fill=(250, 250, 250), outline=OL, width=3)   # mug
     d.text((330, 788), "R", font=font(800, 18), fill=(210, 52, 56), anchor="mm")
     d.rectangle([400, 760, 470, 804], fill=(40, 44, 60), outline=OL, width=3)      # clipboard
