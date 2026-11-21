@@ -32,24 +32,28 @@ LINES = [
     ([("VOTE", W), ("BELOW.", G), ("FOLLOW" if PLATFORM != "youtube" else "SUBSCRIBE", R_), ("FOR", W), ("EP.\u00a06.", Y)], 2.6),
 ]
 GAP = 0.0
-STARTS = []
-_t = 0.15
-for words, dur in LINES:
-    STARTS.append(_t)
-    _t += dur
-TOTAL = _t + 0.3
+import json as _json
+VOICE = _json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "vo/lines.json")))
+if PLATFORM == "youtube":   # "Subscribe for episode six" take is a little longer
+    VOICE[-1] = (VOICE[-1][0], VOICE[-1][0] + 2.96)
+STARTS = [max(0.0, a - 0.12) for a, _ in VOICE]
+STARTS[0] = 0.0
+for i in range(len(LINES)):
+    nxt = STARTS[i + 1] if i + 1 < len(LINES) else VOICE[-1][1] + 0.45
+    LINES[i] = (LINES[i][0], nxt - STARTS[i])
+TOTAL = VOICE[-1][1] + 0.45
 
 
 def word_times(i):
     words, dur = LINES[i]
-    st = STARTS[i]
-    talk = dur * 0.85
+    st, en = VOICE[i]
+    talk = en - st
     lens = [len(w) + 2 for w, _ in words]
     tot = sum(lens)
     acc = 0
     out = []
     for (w, c), L in zip(words, lens):
-        out.append((w, st + 0.05 + talk * acc / tot, c))
+        out.append((w, st + talk * acc / tot - 0.03, c))
         acc += L
     return out
 
@@ -532,7 +536,7 @@ def s16(t, u, T):
         bk = clamp((u - 0.38) / 0.5)
         draw_ball_s(img, lerp(450, 620, ease_out(bk)), G - 10, 5)
         if int(t * 6) % 2:
-            glow_ring(img, 320, G - 40, 45, 0.7, (255, 60, 60))
+            glow_ring(img, 246, G - 42, 24, 0.8, (255, 60, 60))
         if u < 0.55:
             impact_lines(img, 360, G - 100, T + 0.3 * LINES[15][1], t, 12)
         pill(img, 360, 1210, "INJURED", (200, 40, 50), spring(t - T - 0.45 * LINES[15][1], 13, 7), 30)

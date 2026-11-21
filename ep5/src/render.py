@@ -9,5 +9,5 @@ def work(i):
 if __name__=="__main__":
     with Pool(4) as pool: list(pool.imap_unordered(work,range(NF),chunksize=8))
     out=sys.argv[1]
-    subprocess.run(["ffmpeg","-v","error","-y","-framerate","30","-i",f"{D}/%05d.png","-i","sfx.wav","-map","0:v","-map","1:a",
+    subprocess.run(["ffmpeg","-v","error","-y","-framerate","30","-i",f"{D}/%05d.png","-i",f"mix_{P}.wav","-map","0:v","-map","1:a",
       "-c:v","libx264","-preset","medium","-crf","18","-pix_fmt","yuv420p","-c:a","aac","-b:a","192k","-ac","2","-shortest","-movflags","+faststart",out],check=True)
