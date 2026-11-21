@@ -574,7 +574,12 @@ def caption(img, words, t, wrap=600, y=108, size=50):
         y += size + 6
 
 
+NO_TAGS = {"YOU", "MASON · #9", "OKAFOR · 12", "DIXON · KEEPER #2", "YOU · 11 · NO. 3", "+1 HEAD"}  # no labels over players
+
+
 def pill(img, x, y, text, bg, k=1.0, size=30, fg=(255, 255, 255), border=OL):
+    if text in NO_TAGS:
+        return
     if k <= 0.02:
         return
     d = ImageDraw.Draw(img)
@@ -587,7 +592,8 @@ def pill(img, x, y, text, bg, k=1.0, size=30, fg=(255, 255, 255), border=OL):
 
 
 def bubble(img, x, y, text, k=1.0, size=30, tail="down"):
-    """white speech bubble (reference style)"""
+    """speech bubbles are banned (user rule): dialogue goes in the captions only"""
+    return
     if k <= 0.02:
         return
     d = ImageDraw.Draw(img)

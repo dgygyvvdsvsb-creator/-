@@ -41,3 +41,8 @@ Reference: remi_sport "De zéro à champion du monde" EP7 (85 s).
   It does both jobs in one pass: frame-by-frame visuals (anatomy, scale, physics, round ball, keepers on the goal line,
   caption vs picture) AND story/continuity logic. Fix everything it finds, then at most one short re-check by the same agent.
 - Goals are youth-size: height ≈ 1.2 × keeper height, width ≈ 2 × goal height. Show a small keeper by making HIM smaller, never the goal bigger.
+
+## No text over characters (user rule, permanent)
+- NO speech bubbles and NO name tags above characters. Dialogue appears ONLY in the captions.
+- Keepers diving must land on the grass after the dive; catches = ball stays in the gloves.
+- Objects passed between characters are held in their hands, never floating.

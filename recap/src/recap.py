@@ -88,39 +88,77 @@ def reuse(k, u):
         build.pill = orig
 
 
+def hand_xy(cx, by, s, hx, hy):
+    """full-res position of a sprite pixel (sprite 24x39, margin 3,10), pasted bottom-centre at (cx,by), scale s"""
+    return cx - 12 * s + (hx + 3 + 0.5) * s, by - 39 * s + (hy + 10 + 0.5) * s
+
+
+def glove_pair(img, x, y, sc=1.0):
+    d = ImageDraw.Draw(img)
+    for dx in (-17 * sc, 17 * sc):
+        d.rounded_rectangle([x + dx - 15 * sc, y - 18 * sc, x + dx + 15 * sc, y + 18 * sc], int(7 * sc), fill=(252, 140, 27), outline=OL, width=4)
+        d.rectangle([x + dx - 15 * sc, y + 8 * sc, x + dx + 15 * sc, y + 18 * sc], fill=(206, 98, 14), outline=OL, width=3)
+
+
+def dive(img, x0, GL, side, phase, scale=8, ball_to=None, catch=False):
+    """keeper: ready (0-.2) -> airborne parabola (.2-.7) -> lands flat on the grass (.7-1).
+    returns glove position. side +1 = dives to screen right."""
+    D = 170
+    if phase < 0.2:
+        shadow(img, x0, GL, 200)
+        sp = paste(img, hero(pose="ready", gloves=True), scale, x0, GL)
+        return x0 + side * 90, GL - 150
+    a = clamp((phase - 0.2) / 0.5)
+    x = x0 + side * D * ease_out(a)
+    lift = math.sin(a * math.pi) * 110
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), scale).rotate(-90 if side > 0 else 90, expand=True, resample=Image.NEAREST)
+    yb = GL + 3 * scale - lift                      # bottom of the body
+    shadow(img, x, GL, sp.width * (0.9 - 0.3 * math.sin(a * math.pi)), 30, 80)
+    img.alpha_composite(sp, (int(x - sp.width / 2), int(yb - sp.height)))
+    gx = x + side * (sp.width / 2 - 47)
+    gy = yb - sp.height / 2 + 4
+    if a >= 1 and phase < 0.78:
+        impact_lines(img, x, GL - 20, 0, (phase - 0.7) * 2, 8)   # landing dust
+    return gx, gy
+
+
 # ---------------------------------------------------------------- new scenes
 def r_zero_ten(t, u, T):
     img = pitch_set()
     GL = 1040
     goal(img, 360, GL, 600, 300)
-    n = min(10, int(u * 12) + 1)
-    phase = (u * 12) % 1
-    side = 1 if int(u * 12) % 2 else -1
-    sp = big(hero(pose="reach", gloves=True, mouth="open"), 8).rotate(-90 if side < 0 else 90, expand=True, resample=Image.NEAREST)
-    kx = 360 - side * 120 * ease_out(phase)
-    img.alpha_composite(sp, (int(kx - sp.width / 2), int(GL - 170 - sp.height / 2)))
-    draw_ball_s(img, lerp(360, 360 + side * 220, phase), lerp(1300, GL - 200, phase), 5)
-    for k in range(n - 1):   # balls already in the net
-        draw_ball_s(img, 150 + (k * 47) % 420, GL - 20 - (k % 3) * 14, 4)
-    score_bar(img, 1110, "YOU", "RIVERS", f"0 - {n}", "1ST MATCH")
-    img = flash(img, 0.25 * clamp(1 - phase * 6), (255, 60, 60))
-    return cam(img, 1 + 0.04 * u, 360, 900, *shake(t, T + (int(u * 12) / 12) * 3, .15, 6))
+    k = int(u * 10)
+    n = min(10, k + 1)
+    phase = (u * 10) % 1
+    side = 1 if k % 2 else -1
+    for j in range(n - 1):   # balls already in the net
+        draw_ball_s(img, 150 + (j * 47) % 420, GL - 20 - (j % 3) * 14, 4)
+    dive(img, 360, GL, -side, phase)              # wrong way every time
+    bp = clamp(phase / 0.6)
+    draw_ball_s(img, lerp(360, 360 + side * 220, bp), lerp(1300, GL - 160, bp), 5)
+    score_bar(img, 1110, "YOU", "RIVERS", f"0 - {n if phase > 0.6 else n - 1}", "1ST MATCH")
+    img = flash(img, 0.25 * clamp(1 - abs(phase - 0.62) * 12), (255, 60, 60))
+    return cam(img, 1 + 0.04 * u, 360, 900)
 
 
 def r_gloves(t, u, T):
     img = sky_trees(top=(150, 150, 190), bot=(200, 196, 214), key="dusk").convert("RGBA")
     crowd_band(img, 430, 520, seed=8); pitch(img, 520)
-    shadow(img, 220, 1120, 260); shadow(img, 500, 1120, 220)
-    paste(img, grandad(pose="stand", mouth="smile"), 12, 220, 1120)
-    paste(img, cane(), 12, 92, 1120)
-    paste(img, hero(mouth="smile", look=-1), 10, 500, 1120)
-    k = clamp((u - 0.15) / 0.4)
-    gx, gy = lerp(330, 430, ease_in_out(k)), 820 - math.sin(k * math.pi) * 80
-    glow_ring(img, gx, gy, 70 + 10 * math.sin(t * 6), 0.7, (255, 200, 120))
+    shadow(img, 230, 1120, 260); shadow(img, 470, 1120, 220)
+    paste(img, cane(), 12, 102, 1120)
+    paste(img, grandad(pose="stand", mouth="smile"), 12, 230, 1120)
+    paste(img, hero(mouth="smile", look=-1), 10, 470, 1120)
+    g = hand_xy(230, 1120, 12, 16, 15)      # Grandad's hand (screen right)
+    h = hand_xy(470, 1120, 10, 1, 15)       # your hand (screen left)
+    k = ease_in_out(clamp((u - 0.2) / 0.35))
+    gx, gy = lerp(g[0] + 10, h[0] - 10, k), lerp(g[1] - 10, h[1] - 10, k)
+    if 0 < k < 1:
+        glow_ring(img, gx, gy, 60, 0.5, (255, 200, 120))
+    glove_pair(img, gx, gy, 1.0)
+    # hands drawn over the gloves = holding them
     d = ImageDraw.Draw(img)
-    for dx in (-34, 34):
-        d.rounded_rectangle([gx + dx - 30, gy - 34, gx + dx + 30, gy + 34], 14, fill=(252, 140, 27), outline=OL, width=5)
-        d.rectangle([gx + dx - 30, gy + 14, gx + dx + 30, gy + 34], fill=(206, 98, 14), outline=OL, width=4)
+    hx, hy = (g if k < 0.5 else h)
+    d.rectangle([hx - 9, hy - 9, hx + 9, hy + 9], fill=SKIN["old" if k < 0.5 else "light"][0], outline=OL, width=3)
     if u > 0.6:
         pill(img, 360, 470, "2 SIZES TOO BIG", (200, 120, 20), spring(t - T - 0.6 * (RV[1][1] - RV[1][0]), 13, 7), 30)
     return cam(img, 1 + 0.05 * u, 360, 900)
@@ -141,14 +179,18 @@ def r_dives(t, u, T):
     crowd_band(img, 430, 520, seed=5); pitch(img, 520)
     GL = 1040
     goal(img, 360, GL, 600, 300)
-    phase = (u * 5) % 1
-    side = 1 if int(u * 5) % 2 else -1
-    if phase > 0.25:
-        sp = big(hero(pose="reach", gloves=True, mouth="open"), 8).rotate(-90 if side > 0 else 90, expand=True, resample=Image.NEAREST)
-        kx = 360 + side * 150 * ease_out(phase)
-        img.alpha_composite(sp, (int(kx - sp.width / 2), int(GL - 120 - sp.height / 2 - math.sin(phase * math.pi) * 40)))
-    else:
-        paste(img, hero(pose="ready", gloves=True), 8, 360, GL)
+    k = int(u * 4)
+    phase = (u * 4) % 1
+    side = 1 if k % 2 else -1
+    gx, gy = dive(img, 360, GL, side, phase)
+    if phase < 0.45:   # ball flying to where the gloves will be
+        tx, ty = 360 + side * 230, GL - 150
+        bp = clamp(phase / 0.45)
+        draw_ball_s(img, lerp(360 - side * 60, tx, bp), lerp(1320, ty, bp), 5)
+    else:              # caught: ball stays in the gloves, through the landing
+        draw_ball_s(img, gx, gy + 34, 5)
+        if phase < 0.55:
+            glow_ring(img, gx, gy, 60, 0.6, (255, 255, 200))
     n = int(1 + 499 * ease_in_out(u))
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([180, 1100, 540, 1230], 18, fill=(16, 18, 36), outline=C_Y, width=5)
