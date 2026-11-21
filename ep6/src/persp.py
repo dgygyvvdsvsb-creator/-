@@ -109,7 +109,7 @@ def _ads(img, y0, y1):
         d.text((x + 70, (y0 + y1) / 2), labs[k % 4], font=font(800, 16), fill=(255, 255, 255), anchor="mm")
 
 
-GRASS_A, GRASS_B = (78, 160, 74), (68, 146, 66)
+GRASS_A, GRASS_B = (86, 146, 80), (77, 134, 73)     # muted, like the reference
 LINE = (240, 244, 236)
 
 
@@ -219,7 +219,7 @@ def ground_shadow(img, cam, X, Z, r=0.45, a=90):
 
 def ball_at(img, cam, X, Z, Y, shadow_=True):
     k = cam.k(Z)
-    r = max(3, 0.11 * k)
+    r = max(6, 0.16 * k)          # stylised: a bit bigger than real so it reads well
     if shadow_:
         sx, sy = cam.p(X, Z)
         shadow(img, sx, sy, r * 2.2 / (1 + Y * 0.6), r * 0.6, 70)
@@ -299,26 +299,55 @@ def scoreboard(img, y, left, right, sl, sr, minute, k=1.0, flash_side=None, t=0)
 
 
 def keeper_world(img, cam, X, Z, side, phase, height_m=1.6, sprite=None):
-    """keeper on the goal line at (X,Z): ready (<.2) -> dive parabola (.2-.7) -> lying on grass (>.7).
-    returns (glove screen x, y)."""
+    """animated save on the goal line at (X,Z):
+       0.00-0.12 set (knees bend)  0.12-0.30 explosive push + flight to the ball (fast)
+       0.30-0.38 catch at full stretch   0.38-0.55 falls under gravity onto the grass, small bounce
+       0.55-1.00 lies on the grass, ball held, slight breathing. returns glove (x, y) on screen."""
     k = cam.k(Z)
-    if phase < 0.2:
+    s = height_m * k / 31.0
+    if phase < 0.12:                                   # set position, sinking a little
+        dip = math.sin(phase / 0.12 * math.pi) * 0.08
         ground_shadow(img, cam, X, Z, 0.45)
-        sprite_at(img, cam, sprite or hero(pose="ready", gloves=True), X, Z, height_m=height_m)
+        sprite_at(img, cam, sprite or hero(pose="ready", gloves=True), X, Z, Y=-dip, height_m=height_m)
         x, y = cam.p(X + side * 0.7, Z, 1.1)
         return x, y
-    a = clamp((phase - 0.2) / 0.5)
-    Xc = X + side * 1.6 * ease_out(a)
-    lift = math.sin(a * math.pi) * 0.9
-    s = height_m * k / 31.0
-    sp = hero(pose="reach", gloves=True, mouth="open").resize((max(1, int(24 * s)), max(1, int(39 * s))), Image.NEAREST)
-    sp = sp.rotate(-90 if side > 0 else 90, expand=True, resample=Image.NEAREST)
-    gx, gy = cam.p(Xc, Z, lift)
-    ground_shadow(img, cam, Xc, Z, 0.9 - 0.3 * math.sin(a * math.pi), 80)
-    yb = gy + 3 * s
+    if phase < 0.38:                                   # take-off and flight (ease-out = fast start)
+        a = ease_out((phase - 0.12) / 0.26)
+        Xc = X + side * 1.5 * a
+        Yc = 0.35 + 0.55 * math.sin(a * math.pi * 0.5)  # rises to the ball
+        rot = 90 * ease_out(min(1.0, a * 1.6))
+    elif phase < 0.55:                                 # gravity: drop to the grass, small bounce
+        f = (phase - 0.38) / 0.17
+        Xc = X + side * (1.5 + 0.25 * f)
+        Yc = 0.9 * (1 - f) ** 2 + 0.08 * abs(math.sin(f * math.pi * 2)) * (1 - f)
+        rot = 90
+    elif phase < 0.68:                                 # short moment on the grass
+        Xc = X + side * 1.75
+        Yc = 0.0
+        rot = 90
+    else:                                              # gets straight back up, ball in his hands
+        Xu = X + side * 1.75
+        f = ease_out((phase - 0.68) / 0.14)
+        if f < 1:
+            ground_shadow(img, cam, Xu, Z, 0.45)
+            sprite_at(img, cam, hero(pose="sit", gloves=True), Xu, Z, Y=-0.25 * (1 - f), height_m=height_m * (0.8 + 0.2 * f))
+        else:
+            ground_shadow(img, cam, Xu, Z, 0.45)
+            sprite_at(img, cam, hero(pose="catch", gloves=True, mouth="smile"), Xu, Z, height_m=height_m)
+        x, y = cam.p(Xu, Z, 1.0 if f >= 1 else 0.6)
+        return x, y
+    sp = (sprite or hero(pose="reach", gloves=True, mouth="open" if phase < 0.55 else "smile"))
+    sp = sp.resize((max(1, int(24 * s)), max(1, int(39 * s))), Image.NEAREST)
+    sp = sp.rotate(-rot if side > 0 else rot, expand=True, resample=Image.NEAREST)
+    ground_shadow(img, cam, Xc, Z, 0.55 + 0.35 * clamp(1 - Yc), 80)
+    gx, gy = cam.p(Xc, Z, Yc)
+    body_h = 9 * s                                     # half thickness of the lying body
+    yb = gy + body_h * 0.6
     img.alpha_composite(sp, (int(gx - sp.width / 2), int(yb - sp.height)))
-    return gx + side * (sp.width / 2 - 6 * s), yb - sp.height / 2
-
+    if 0.38 <= phase < 0.6 and Yc < 0.12:              # landing dust
+        impact_lines(img, gx, cam.p(Xc, Z)[1], 0.0, (phase - 0.5) * 3, 8)
+    hand_x = gx + side * (sp.width / 2 - 6 * s)
+    return hand_x, yb - sp.height / 2
 
 def ball_trail(img, cam, pts, a, length=0.12, n=4):
     """motion streaks that trail the ball along its own flight path (they show where it came from)"""

@@ -41,7 +41,7 @@ def variant_A(t, w):
         ground_shadow(img, c, X, Z, 0.35)
         sprite_at(img, c, ours(n, pose="run", phase=t * 2.4), X, Z, height_m=1.55)
     ground_shadow(img, c, *P9, 0.35)
-    sprite_at(img, c, opp(9, view="back", pose="kick" if w > kick9 - 0.06 else "stand", phase=clamp((w - kick9 + 0.06) / 0.1)), *P9, height_m=1.55)
+    sprite_at(img, c, opp(9, view="back", pose="kickL" if w > kick9 - 0.06 else "stand", phase=clamp((w - kick9 + 0.06) / 0.1)), *P9, height_m=1.55)   # left foot curler
     ground_shadow(img, c, *P7, 0.35)
     sprite_at(img, c, opp(7, view="back", pose="kick" if w < 0.12 else "stand", phase=clamp(w / 0.1)), *P7, height_m=1.55)
     if w < kick9:                      # the pass, with its dashed line

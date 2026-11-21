@@ -115,6 +115,15 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
                 y = 18 + math.cos(ang) * i
                 c = sk if i < 4 else (kit.socks if i < 8 else OL)
                 R(int(x) - 1, int(y), int(x) + 1, int(y), c)
+        elif pose == "kickL":   # strikes with the screen-LEFT leg (player's left foot when seen from behind)
+            R(10, 18, 12, 21, sk); R(10, 22, 12, 25, kit.socks); R(10, 26, 13, 27, OL)
+            k = phase
+            ang = lerp(-0.9, 1.1, k)
+            for i in range(9):
+                x = 6 - math.sin(ang) * i
+                y = 18 + math.cos(ang) * i
+                c = sk if i < 4 else (kit.socks if i < 8 else OL)
+                R(int(x) - 1, int(y), int(x) + 1, int(y), c)
         elif sit or pose in ("sit", "hurt"):
             R(5, 18, 7, 20, kit.shorts); R(10, 18, 12, 20, kit.shorts)
             R(5, 21, 7, 23, sk); R(10, 21, 12, 23, sk)
@@ -182,6 +191,8 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 5, -7); arm(1, 12, -7)
     elif pose == "kick":
         arm(-1, -1, 12); arm(1, 17, 13)
+    elif pose == "kickL":
+        arm(-1, 0, 13); arm(1, 18, 12)
     elif pose == "catch":
         arm(-1, 6, 12); arm(1, 11, 12)
     elif pose == "whisper":

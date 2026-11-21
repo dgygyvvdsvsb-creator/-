@@ -1,7 +1,7 @@
 """EP6 — the derby. remi_sport-style perspective match scenes."""
 import os, sys, json
 from persp import *
-from persp import _xzy, ball_trail
+from persp import _xzy, ball_trail, pretty_arc
 import build   # caption chunking + office/room helpers
 
 PLATFORM = os.environ.get("PLATFORM", "tiktok")
@@ -255,16 +255,23 @@ def s_knock(t, u, T):
         for k in range(3):
             impact_lines(img, 330, 600, T + 0.12 + k * 0.25, t, 8)
         return cam(img, 1 + 0.06 * u, 360, 600)
-    # inside: the door opens, you step in, the coach looks up from his desk
+    # inside: we look over your shoulder from the doorway — you walk in FRONT of the desk, the coach looks up
     img = office(t)
+    desk_and_coach(img, t, look=0, blink=u < 0.62)
     d = ImageDraw.Draw(img)
-    open_k = ease_out((u - 0.5) / 0.25)
-    d.rectangle([560, 180, 700, 760], fill=(90, 96, 116), outline=OL, width=6)         # doorway (corridor behind)
-    d.polygon([(560, 180), (560 + 140 * (1 - open_k) + 20 * open_k, 180 + 30 * open_k),
-               (560 + 140 * (1 - open_k) + 20 * open_k, 760 - 30 * open_k), (560, 760)], fill=(150, 100, 60), outline=OL)
-    paste(img, hero(look=-1), 9, 640, 770)
-    desk_and_coach(img, t, look=1 if u > 0.75 else 0, blink=u < 0.7)
-    return cam(img, 1.0 + 0.03 * u, 360, 700)
+    k = ease_out((u - 0.5) / 0.3)
+    # door frame around the camera (we are standing in the doorway)
+    d.rectangle([0, 0, 46, FH], fill=(120, 80, 46), outline=OL, width=6)
+    d.rectangle([FW - 46, 0, FW, FH], fill=(120, 80, 46), outline=OL, width=6)
+    d.rectangle([0, 0, FW, 40], fill=(120, 80, 46), outline=OL, width=6)
+    # the opened door swings to the left, close to camera
+    dw = 260 * (1 - k) + 70 * k
+    d.polygon([(46, 40), (46 + dw, 70), (46 + dw, FH - 20), (46, FH)], fill=(150, 100, 60), outline=OL)
+    # you step in: back view, walking forward toward the desk
+    step = ease_out((u - 0.5) / 0.5)
+    sc_ = int(lerp(17, 13, step))
+    paste(img, hero(view="back", pose="run" if step < 0.9 else "stand", phase=t * 1.6), sc_, 430, int(lerp(1500, 1330, step)))
+    return cam(img, 1.0 + 0.03 * u, 360, 760)
 
 
 def s_coach(t, u, T):
@@ -456,14 +463,14 @@ def s_header(t, u, T):
         dotted_path(img, c, cross, 1.0, from_=a)
         ball_trail(img, c, cross, a, 0.1)
         ball_at(img, c, *at(cross, a))
-    elif phase < 0.45:
-        a = clamp((u - 0.4) / 0.25)
+    elif phase < 0.33:
+        a = clamp((u - 0.4) / 0.2)
         ball_trail(img, c, head, a, 0.25)
         ball_at(img, c, *at(head, a))
         impact_lines(img, *c.p(1.8, 8.6, 2.1), T + 0.4 * (STARTS[12] - T), t, 8)
     else:
         draw_ball(img, gx, gy + 12, 0.9)
-        if phase < 0.6:
+        if phase < 0.45:
             glow_ring(img, gx, gy, 50, 0.8, (255, 255, 200))
     mini_score(img, t, "34'")
     return cam(img, 1.05 + 0.04 * u, 360, 640)
@@ -688,24 +695,26 @@ def s_end(t, u, T):
 
 def s_training(t, u, T):
     """Monday training: cones, bibs, you dive and CATCH, then land"""
-    img, c = shooter_view(t, 12, camH=2.2, hor=470, stadium=False)
-    goal3d(img, c, 12)
+    img, c = shooter_view(t, 8.5, camH=2.2, hor=470, stadium=False)
+    goal3d(img, c, 8.5)
     d = ImageDraw.Draw(img)
-    for X, Z in ((-6, 6), (-3, 5), (3, 5), (6, 6), (-4, 9), (4, 9)):     # cones
+    for X, Z in ((-5, 4), (-2.5, 3.5), (2.5, 3.5), (5, 4)):     # cones
         x, y = c.p(X, Z); r = 0.18 * c.k(Z)
         d.polygon([(x - r, y), (x + r, y), (x, y - r * 2.2)], fill=(252, 140, 27), outline=OL)
     k = int(u * 3); phase = (u * 3) % 1
     side = 1 if k % 2 else -1
-    gx, gy = keeper_world(img, c, 0, 12, side, phase)
-    shot = arc((0.0, 2.5, 0.1), (side * 1.55, 12, 1.0), apex=0.8)
-    if phase < 0.45:
-        a = phase / 0.45
-        ball_trail(img, c, shot, a, 0.12)
+    gx, gy = keeper_world(img, c, 0, 8.5, side, phase)
+    shot = arc((-0.05, 2.4, 0.0), (side * 1.5, 8.5, 0.95), apex=0.45)   # starts at Dixon's boot
+    if phase < 0.33:                                       # fast shot, arrives at full stretch
+        a = phase / 0.33
+        ball_trail(img, c, shot, a, 0.15)
         ball_at(img, c, *at(shot, a))
     else:
-        draw_ball(img, gx, gy + 10, 0.7)
-    ground_shadow(img, c, -3.2, 10.5, 0.4)
-    sprite_at(img, c, coach(look=1), -3.2, 10.5, height_m=1.75)   # beside the goal, watching
+        draw_ball(img, gx, gy + 14, 0.16 * c.k(8.5) / 6.5)
+        if phase < 0.42:
+            glow_ring(img, gx, gy, 55, 0.8, (255, 255, 210))       # caught: same size as in flight at the goal
+    ground_shadow(img, c, -3.6, 7.2, 0.4)
+    sprite_at(img, c, coach(look=1), -3.6, 7.2, height_m=1.75)   # beside the goal, watching
     paste(img, dixon(view="back", pose="kick" if phase < 0.25 else "stand", phase=clamp(phase / 0.2), gloves=False), 11, 300, 1330)  # Dixon takes the shots
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([200, 252, 520, 308], 12, fill=(14, 16, 30), outline=C_Y, width=4)
@@ -951,6 +960,95 @@ def s_attackA(t, u, T):
     return img
 
 
+
+# ---------------- free kick through the keeper's eyes
+FKP = (3.2, 16.6)                        # ball spot (their #10 behind it)
+FK_EYES = arc((3.2, 16.2, 0.1), (2.3, 2.6, 1.9), apex=2.0, curve=-0.9)   # over the wall, toward your top-right corner
+
+
+def eyes_gloves(img, push=0.0, t=0.0):
+    """your own gloves at the bottom of the frame (first person). push 0 ready .. 1 flying to the right"""
+    d = ImageDraw.Draw(img)
+    bob = math.sin(t * 3) * 4 * (1 - push)
+    for side in (-1, 1):
+        gx = 360 + side * 230 + push * 260
+        gy = 1090 + bob - push * (380 if side > 0 else 150)
+        s_ = 1.0 + 0.25 * push
+        d.rounded_rectangle([gx - 80 * s_, gy - 90 * s_, gx + 80 * s_, gy + 90 * s_], int(36 * s_), fill=(252, 140, 27), outline=OL, width=8)
+        d.rectangle([gx - 80 * s_, gy + 40 * s_, gx + 80 * s_, gy + 90 * s_], fill=(206, 98, 14), outline=OL, width=6)
+        for f in range(4):
+            fx = gx - 54 * s_ + f * 36 * s_
+            d.line([(fx, gy - 86 * s_), (fx, gy - 40 * s_)], fill=(206, 98, 14), width=6)
+        d.rectangle([gx - 80 * s_, gy + 90 * s_, gx + 80 * s_, gy + 120 * s_], fill=(40, 168, 74), outline=OL, width=6)  # sleeve
+        if side < 0:
+            d.rectangle([gx - 70 * s_, gy + 96 * s_, gx + 70 * s_, gy + 108 * s_], fill=(225, 30, 40))   # red bracelet (right wrist... seen from inside)
+
+
+def eyes_set(t):
+    c = Cam(camX=0.0, camH=1.5, hor=520, f=1500)          # longer lens: wall and kicker big, like through your eyes
+    img = backdrop(520, stadium=True)
+    pitch_near(img, c, 0.0)
+    return img, c
+
+
+def fk_wall_and_kicker(img, c, t, kick_pose=None, kp=0.0, peek=0.0):
+    # their captain behind the wall: you only catch a glimpse of him between two heads
+    ground_shadow(img, c, FKP[0] + 0.55, FKP[1] + 0.6, 0.35)
+    sprite_at(img, c, opp(10, pose=kick_pose or "stand", phase=kp), FKP[0] + 0.55 + peek, FKP[1] + 0.6, height_m=1.55)
+    ball_at(img, c, FKP[0], FKP[1] - 0.2, 0.0)
+    for i, X in enumerate((-1.1, -0.35, 0.4, 1.15)):      # OUR wall, backs to you, arms crossed
+        ground_shadow(img, c, X, 9.15, 0.32)
+        sprite_at(img, c, ours((4, 5, 9, 6)[i], view="back"), X, 9.15, height_m=1.55)
+
+
+def s_fk(t, u, T):
+    """'Their captain. Top corner.' — your eyes: the wall, a glimpse of #10, and where you think it will go"""
+    img, c = eyes_set(t)
+    fk_wall_and_kicker(img, c, t, peek=0.25 * math.sin(t * 2))
+    # imagined flight: a faint ghost curve that draws itself, and a ring where you expect it
+    k = ease_out(clamp((u - 0.25) / 0.5))
+    if k > 0:
+        ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        pretty_arc(ov, c, FK_EYES[:int(len(FK_EYES) * 0.92)], k, 0.0, col=(235, 240, 255))
+        ov.putalpha(ov.split()[3].point(lambda v: int(v * 0.55)))
+        img.alpha_composite(ov)
+        if k > 0.95:
+            tx, ty = c.p(*at(FK_EYES, 0.92))
+            glow_ring(img, tx, ty, 46 + 6 * math.sin(t * 6), 0.7, (235, 240, 255))
+    eyes_gloves(img, 0.0, t)
+    mini_score(img, t, "90'")
+    return cam(img, 1.0 + 0.05 * u, 360, 760)
+
+
+def s_slowmo(t, u, T):
+    """'You see it early. You push off.' — he strikes, it rises over the wall; you WAIT, then go late"""
+    img, c = eyes_set(t)
+    kick = 0.12
+    kp = clamp((u - kick + 0.06) / 0.1)
+    fk_wall_and_kicker(img, c, t, kick_pose="kick" if u > kick - 0.06 else None, kp=kp)
+    a = 0.0 if u < kick else 0.85 * ((u - kick) / (1 - kick)) ** 1.25     # slow motion, speeding up at the end
+    wall_jump = 0.35 * math.sin(clamp((u - kick) / 0.35) * math.pi) if u > kick else 0
+    if a > 0:
+        if a < 0.85:
+            ball_trail(img, c, FK_EYES, a, 0.06)
+        ball_at(img, c, *at(FK_EYES, a))
+    push = ease_in_out(clamp((u - 0.62) / 0.38))      # you only push off once it has cleared the wall
+    eyes_gloves(img, push, t)
+    slowmo_bars(img, 1.0 if kick < u < 0.98 else 0.0)
+    mini_score(img, t, "90'")
+    return cam(img, 1.0 + 0.18 * push, 360 + 160 * push, 700 - 120 * push)
+
+
+from PIL import ImageEnhance
+
+
+def grade(img):
+    """muted reference look: less saturation, slightly softer contrast, warm evening tint"""
+    img = ImageEnhance.Color(img).enhance(0.78)
+    img = ImageEnhance.Contrast(img).enhance(0.92)
+    return Image.blend(img, Image.new("RGB", img.size, (60, 50, 70)), 0.07)
+
+
 SCENES = [s_hook, s_knock, s_coach, s_training, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
           s_header, s_1v1, s_mason_goal, s_board, s_fk, s_slowmo, s_finger, s_whistle, s_pen, s_choice, s_end]
 
@@ -968,7 +1066,8 @@ def frame(t):
     T = STARTS[i]
     end = STARTS[i + 1] if i + 1 < len(STARTS) else TOTAL
     u = clamp((t - T) / max(0.1, end - T))
-    img = SCENES[i](t, u, T).convert("RGBA")
+    img = SCENES[i](t, u, T).convert("RGB")
+    img = grade(img).convert("RGBA")
     if i > 0 and t - T < 0.07 and SCENES[i] is not SCENES[i - 1]:
         img = flash(img, 0.3)
     overlay(img, t, i)
