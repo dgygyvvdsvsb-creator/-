@@ -322,8 +322,6 @@ def r_signed(t, u, T):
         draw_ball_s(img, gx, gy + 34, 5)
         if phase < 0.6:
             glow_ring(img, gx, gy, 70, 0.7, (255, 255, 200))
-    shadow(img, 620, 1250, 90)
-    paste(img, coach(look=-1), 5, 620, 1250)
     if u > 0.55:
         k = spring(t - T - 0.55 * (RSTARTS[10] - T), 13, 7)
         d = ImageDraw.Draw(img)
