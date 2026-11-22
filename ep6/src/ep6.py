@@ -1043,25 +1043,29 @@ def s_slowmo(t, u, T):
 
 def s_crosses(t, u, T):
     """Tuesday: crosses from the wing, you rise above everyone and catch"""
-    img, c = shooter_view(t, 8.5, camX=-1.0, camH=2.0, hor=470, stadium=False)
+    k = min(1, int(u * 2)); ph = (u * 2) % 1 if u < 1 else 1.0
+    # two different crosses: 1) floated from the LEFT wing, 2) whipped in from the RIGHT, he steps across
+    V = [dict(camX=-1.0, camH=2.0, kx=0.3, src=(-11.0, 5.5, 0.3), apex=3.0, mates=((1.4, 7.0, 5), (-0.9, 6.8, 7))),
+         dict(camX=1.2, camH=2.6, kx=1.1, src=(10.5, 4.0, 0.2), apex=1.4, mates=((-0.6, 6.4, 4), (2.3, 7.2, 6)))][k]
+    img, c = shooter_view(t, 8.5, camX=V["camX"], camH=V["camH"], hor=470, stadium=False)
     goal3d(img, c, 8.5)
-    k = int(u * 2); ph = (u * 2) % 1
-    cross = arc((-11.0, 5.5, 0.3), (0.3, 8.35, 1.6 * 0.66 + 0.75), apex=3.0)   # ends exactly at his hands at the top of the jump
+    KX = lerp(0.3, V["kx"], ease_out(clamp(ph / 0.4))) if k == 1 else 0.3
+    cross = arc(V["src"], (V["kx"], 8.35, 1.6 * 0.66 + 0.75), apex=V["apex"])
     # an attacker (Dixon in a bib) and a defender jump too, you jump highest
     jump = math.sin(clamp((ph - 0.35) / 0.4) * math.pi)
-    for X, Z, sp in ((1.4, 7.0, ours(5, view="back", pose="celebrate" if jump > 0.2 else "stand")),
-                     (-0.9, 6.8, ours(7, view="back", pose="celebrate" if jump > 0.2 else "stand"))):
+    for X, Z, n in V["mates"]:
+        sp = ours(n, view="back", pose="celebrate" if jump > 0.2 else "stand")
         ground_shadow(img, c, X, Z, 0.35)
         sprite_at(img, c, sp, X, Z, Y=0.35 * jump, height_m=1.55)
-    ground_shadow(img, c, 0.3, 8.4, 0.45)
+    ground_shadow(img, c, KX, 8.4, 0.45)
     hy = 0.75 * jump
     caught = ph >= 0.55
-    fx, fy = c.p(0.3, 8.4, hy)                   # feet on screen
+    fx, fy = c.p(KX, 8.4, hy)                   # feet on screen
     sc = 1.6 * c.k(8.4) / 31.0
     hands_y = fy - 37 * sc + 11.5 * sc           # glove row of the arms-up pose
     r_ball = 0.16 * c.k(8.4)
     sprite_at(img, c, hero(pose="celebrate" if (jump > 0.15 or caught) else "ready", gloves=True,
-                           mouth="open" if jump > 0.5 else "flat"), 0.3, 8.4, Y=hy, height_m=1.6)
+                           mouth="open" if jump > 0.5 else "flat"), KX, 8.4, Y=hy, height_m=1.6)
     if caught:   # ball IN FRONT of him, clasped by both gloves above his head
         rb = max(r_ball, 3.6 * sc)
         bx_, by_ = fx - 0.5 * sc, hands_y - 6.0 * sc          # held up above his head, clearly in front
