@@ -5,7 +5,7 @@ from persp import _xzy, ball_trail, pretty_arc
 import build   # caption chunking + office/room helpers
 
 PLATFORM = os.environ.get("PLATFORM", "tiktok")
-EP = 7
+EP = 6
 Y, R_, B, G, O, W = C_Y, C_R, C_B, C_G, C_O, C_W
 FOLLOW = "SUBSCRIBE" if PLATFORM == "youtube" else "FOLLOW"
 LINES = [
@@ -31,7 +31,7 @@ LINES = [
     [("FINAL", W), ("WHISTLE.", W), ("ONE,", W), ("ONE.", Y), ("THE", W), ("COACH", W), ("WANTS", W), ("PENALTIES.", R_)],
     [("LAST", W), ("KICK.", R_), ("SAVE", G), ("IT...", W), ("AND", W), ("SATURDAY", Y), ("IS", W), ("YOURS.", Y)],
     [("LAST", W), ("TIME", W), ("HE", W), ("WENT", W), ("RIGHT.", B), ("LEFT", Y), ("OR", W), ("RIGHT?", B)],
-    [("VOTE", W), ("BELOW.", G), (FOLLOW, R_), ("FOR", W), ("PART\u00a08.", Y)],
+    [("VOTE", W), ("BELOW.", G), (FOLLOW, R_), ("FOR", W), ("PART\u00a07.", Y)],
 ]
 _vf = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vo/ep6_lines.json")
 if os.path.exists(_vf):
@@ -670,7 +670,7 @@ def s_end(t, u, T):
     d.rounded_rectangle([60, py, 660, py + 520], 34, fill=(14, 18, 44), outline=C_Y, width=6)
     paste(img, hero(mouth="smile", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 180, py + 330 - abs(math.sin(t * 3)) * 8)
     d.text((440, py + 90), "DON'T MISS", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
-    d.text((440, py + 150), "PART 8", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
+    d.text((440, py + 150), "PART 7", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
     tap = T + 0.8
     after = t > tap
     label = ("SUBSCRIBED" if after else "SUBSCRIBE") if PLATFORM == "youtube" else ("FOLLOWING" if after else "+ FOLLOW")
