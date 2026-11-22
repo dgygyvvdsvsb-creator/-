@@ -1122,9 +1122,6 @@ def s_crosses(t, u, T):
         ball_at(img, c, *at(cross, a))
     elif ph < 0.68:
         glow_ring(img, fx - 1 * sc, hands_y, 50, 0.8, (255, 255, 210))
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([200, 290, 520, 346], 12, fill=(14, 16, 30), outline=C_Y, width=4)
-    d.text((360, 318), f"CROSSES CAUGHT {k + (1 if ph > 0.55 else 0)}/2", font=font(800, 26), fill=C_Y, anchor="mm")
     return cam(img, 1.05 + 0.03 * u, 380, 700)
 
 
