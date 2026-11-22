@@ -138,15 +138,51 @@ def shooter_view(t, Zg, camX=0.0, camH=2.6, hor=430, stadium=True):
 
 # ------------------------------------------------------------------ scenes
 def s_hook(t, u, T):
+    """HOOK, 3 quick shots: 1) frozen full-stretch dive, ball at the fingertips (slow-mo)
+    2) whip to the score board 90' 1-1   3) the striker smashes it straight at the camera"""
+    if u < 0.42:                                     # 1) the save that the whole episode builds to
+        w = u / 0.42
+        c = Cam(camX=1.6, camH=1.6, hor=560)
+        img = backdrop(560, stadium=True)
+        pitch_persp(img, c, Zgoal=6.0, box=False)
+        goal3d(img, c, 6.0)
+        sc = 1.6 * c.k(6.0) / 31
+        sp = hero(pose="reach", gloves=True, mouth="open").resize((int(24 * sc), int(39 * sc)), Image.NEAREST).rotate(-55, expand=True, resample=Image.NEAREST)
+        kx, ky = c.p(lerp(1.15, 1.3, w), 6.0, 1.15 + 0.05 * w)
+        ground_shadow(img, c, 1.2, 6.0, 0.8, 70)
+        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
+        bx, by = c.p(lerp(2.0, 2.15, w), lerp(5.2, 5.6, w), 1.9)
+        streak = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        sd = ImageDraw.Draw(streak)
+        for k in range(5):                           # motion streaks behind the ball
+            off = (k - 2) * 9
+            sd.line([(bx - 260, by + 60 + off), (bx - 20, by + off)], fill=(255, 255, 255, 120 - abs(k - 2) * 30), width=6)
+        img.alpha_composite(streak)
+        draw_ball(img, bx, by + 40, 3.0)
+        glow_ring(img, bx, by, 80 + 12 * math.sin(t * 14), 0.75, (255, 240, 180))
+        slowmo_bars(img, 1.0)
+        return cam(img, 1.25 + 0.08 * w, bx - 40, by + 120, rot=-4 + 3 * w)   # frame 0: full colour, no flash
+    if u < 0.55:                                     # 2) whip-pan to the clock
+        w = (u - 0.42) / 0.13
+        img = Image.new("RGBA", (FW, FH), (20, 22, 40, 255))
+        crowd_band(img, 0, 560, seed=33, blur=1.0)
+        ImageDraw.Draw(img).rectangle([0, 560, FW, FH], fill=(18, 20, 34))
+        scoreboard(img, 640, "1ST", "RES", 1, 1, "90'", 1.0, t=t)
+        img = cam(img, 1.3 - 0.3 * ease_out(w), 360 - 300 * (1 - ease_out(w)), 720)
+        return flash(img, 0.6 * clamp(1 - w * 4))
+    w = (u - 0.55) / 0.45                            # 3) shot straight at you
     img, c = keeper_view(t)
     ground_shadow(img, c, 0.4, 8.6, 0.4)
-    sprite_at(img, c, opp(9, pose="kick", phase=1.0), 0.4, 8.6, height_m=1.55)
-    pts = arc((0.2, 8.0, 0.15), (0.3, 1.9, 1.35), apex=0.6)
-    a = clamp(0.45 + u * 0.55)
-    dotted_path(img, c, pts, 1.0, from_=a)
+    sprite_at(img, c, opp(9, pose="kick", phase=clamp(w * 3)), 0.4, 8.6, height_m=1.55)
+    pts = arc((0.2, 8.0, 0.15), (0.3, 1.5, 1.35), apex=0.6)
+    a = clamp(0.15 + ease_in_out(w) * 0.85)
+    ball_trail(img, c, pts, a, 0.2)
     bx, by = ball_at(img, c, *at(pts, a))
     paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430)
-    return cam(img, 1.0 + 0.03 * u, 360, 700)
+    if a > 0.85:
+        glow_ring(img, bx, by, 160, 0.6, (255, 250, 220))
+    img = flash(img, 0.7 * clamp((a - 0.93) / 0.07))
+    return cam(img, 1.0 + 0.12 * w, bx, by, *shake(t, T + 0.62 * (STARTS[1] - T), .3, 10))
 
 
 def tactics_board(img, x0, y0, w, h, t=0):
@@ -1097,7 +1133,14 @@ def s_dixon_watch(t, u, T):
     img, c = shooter_view(t, 8.5, camH=1.7, hor=500, stadium=False)
     goal3d(img, c, 8.5)
     ph = (t * 0.8) % 1
-    keeper_world(img, c, 0.0, 8.5, 1 if int(t * 0.8) % 2 else -1, ph)
+    sd_ = 1 if int(t * 0.8) % 2 else -1
+    gx, gy = keeper_world(img, c, 0.0, 8.5, sd_, ph)
+    shot = arc((0.4, 1.8, 0.1), (sd_ * 1.5, 8.5, 0.95), apex=0.45)
+    if ph < 0.33:
+        ball_trail(img, c, shot, ph / 0.33, 0.15)
+        ball_at(img, c, *at(shot, ph / 0.33))
+    else:
+        draw_ball(img, gx, gy + 14, 0.16 * c.k(8.5) / 6.5)
     img = img.filter(ImageFilter.GaussianBlur(3))
     paste(img, dixon(mouth="flat", look=1, gloves=True, blink=0.6 < u < 0.66), 24, 230, 1560)
     d = ImageDraw.Draw(img)   # folded arms across his chest
