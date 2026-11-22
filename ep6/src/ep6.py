@@ -26,7 +26,8 @@ LINES = [
     [("CORNER.", W), ("HEADER.", W), ("YOU", W), ("FLY.", Y), ("SAVED!", G)],
     [("ONE", W), ("ON", W), ("ONE.", W), ("YOU", W), ("SPREAD", W), ("BIG.", Y), ("SAVED", G), ("AGAIN!", G)],
     [("THEN", W), ("MASON", R_), ("SCORES.", G), ("ONE,", W), ("ONE.", Y)],
-    [("LAST", R_), ("MINUTE.", R_), ("MASON", R_), ("LOSES", W), ("IT.", W), ("FIVE", W), ("TRIPS", R_), ("THEIR", W), ("CAPTAIN.", B)],
+    [("LAST", R_), ("MINUTE.", R_), ("THEIR", W), ("CAPTAIN", B), ("STEALS", R_), ("IT", W), ("FROM", W), ("MASON.", R_),
+     ("FIVE", W), ("TRIPS", R_), ("HIM.", W)],
     [("YELLOW", Y), ("CARD.", Y), ("FREE", W), ("KICK.", W), ("EDGE", W), ("OF", W), ("THE", W), ("BOX.", W)],
     [("THEIR", W), ("CAPTAIN.", B), ("TOP", Y), ("CORNER.", Y)],
     [("YOU", W), ("SEE", W), ("IT", W), ("EARLY.", Y), ("YOU", W), ("PUSH", W), ("OFF.", W)],
@@ -1221,13 +1222,25 @@ def s_foul(t, u, T):
     goal3d(img, c, GZ)
     ground_shadow(img, c, 0.0, GZ, 0.45)
     sprite_at(img, c, hero(pose="ready", gloves=True), 0.0, GZ, height_m=1.6)
-    lose, foul = 0.22, 0.6
-    # Mason loses the ball (ball pinched away), #10 takes it and runs at the box
-    mz = 6.5
-    ground_shadow(img, c, -1.0, mz, 0.35)
-    sprite_at(img, c, mason(view="back", pose="run" if u < lose else "stand", phase=t * 2.4, mouth="sad"), -1.0, mz, height_m=1.55)
-    cz = lerp(7.2, 10.3, ease_in_out(clamp((u - lose) / (foul - lose))))
-    cx = lerp(-0.6, 0.4, clamp(u / foul))
+    lose, foul = 0.3, 0.68
+    # Mason dribbles forward; their captain closes in from the side and STEALS it with a tackle; Mason goes down
+    mz = lerp(5.6, 7.0, clamp(u / lose))
+    mx = -0.5
+    if u < lose:
+        ground_shadow(img, c, mx, mz, 0.35)
+        sprite_at(img, c, mason(view="back", pose="run", phase=t * 2.4), mx, mz, height_m=1.55)
+    else:
+        fk = clamp((u - lose) / 0.15)
+        k = 1.55 * c.k(mz) / 31
+        spm = mason(view="back", pose="stand", mouth="open").resize((int(24 * k), int(39 * k)), Image.NEAREST).rotate(80 * ease_out(fk), expand=True, resample=Image.NEAREST)
+        x, y = c.p(mx - 0.4 * fk, mz)
+        ground_shadow(img, c, mx - 0.4 * fk, mz, 0.5)
+        img.alpha_composite(spm, (int(x - spm.width / 2), int(y - spm.height + 6)))
+    # captain: before the steal he runs in from the right toward Mason's ball, after it he carries it at the box
+    if u < lose:
+        cx = lerp(1.6, mx + 0.6, ease_in_out(u / lose)); cz = lerp(8.5, mz + 0.4, ease_in_out(u / lose))
+    else:
+        cx = lerp(mx + 0.6, 0.4, clamp((u - lose) / (foul - lose))); cz = lerp(mz + 0.4, 10.3, ease_in_out(clamp((u - lose) / (foul - lose))))
     tripped = u > foul
     # our #5 slides in from the right
     sz = lerp(12.0, 10.6, ease_out(clamp((u - 0.35) / (foul - 0.35))))
@@ -1243,11 +1256,11 @@ def s_foul(t, u, T):
     # their captain: runs, then goes flying
     ground_shadow(img, c, cx, cz, 0.35)
     if not tripped:
-        sprite_at(img, c, opp(10, view="back", pose="run", phase=t * 2.8), cx, cz, height_m=1.55)
+        sprite_at(img, c, opp(10, view="back" if u > lose else "front", pose="kick" if abs(u - lose) < 0.04 else "run", phase=t * 2.8), cx, cz, height_m=1.55)
         if u > lose:
             ball_at(img, c, cx + 0.45, cz + 0.22, 0.11)
         else:
-            ball_at(img, c, -0.55, mz + 0.22, 0.11)
+            ball_at(img, c, mx + 0.45, mz + 0.22, 0.11)
     else:
         f = clamp((u - foul) / 0.25)
         k = 1.55 * c.k(cz) / 31
@@ -1265,8 +1278,8 @@ def s_foul(t, u, T):
             w_, h_ = 70 * kk, 100 * kk
             d.rounded_rectangle([560 - w_ / 2, 820 - h_ / 2, 560 + w_ / 2, 820 + h_ / 2], 8, fill=(250, 210, 40), outline=OL, width=5)
             pill(img, 360, 1020, "FREE KICK", (200, 40, 50), kk, 40)
-    if u < lose + 0.1 and u > lose - 0.05:
-        impact_lines(img, *c.p(-0.7, mz + 0.5, 0.2), T + lose * (STARTS[17] - T), t, 8)
+    if lose - 0.02 < u < lose + 0.12:
+        impact_lines(img, *c.p(mx + 0.45, mz + 0.22, 0.2), T + lose * (STARTS[17] - T), t, 10)
     fx, fy = c.p(0.6, lerp(8, 10.4, clamp(u / foul)), 0.6)
     out = cam(img, 1.15 + 0.2 * ease_in_out(clamp(u / foul)), fx, fy, *shake(t, T + foul * (STARTS[17] - T), .3, 12)).convert("RGBA")
     mini_score(out, t, "89'")

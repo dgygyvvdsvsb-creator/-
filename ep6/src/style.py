@@ -154,7 +154,7 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         _num(d, ox + 6, oy + 10, kit.number, kit.num_col) if False else None
         # small number on the chest
         g = str(kit.number)
-        _num(d, ox + 9, oy + 10, g[-1], kit.num_col)
+        _num(d, ox + 9 - 2 * (len(g) - 1), oy + 10, g, kit.num_col)   # full number (10 must not read as 0)
     # arms
     def arm(side, hx, hy):
         sx = 2 if side < 0 else 15
