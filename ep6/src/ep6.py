@@ -141,8 +141,8 @@ def shooter_view(t, Zg, camX=0.0, camH=2.6, hor=430, stadium=True):
 def s_hook(t, u, T):
     """HOOK, 3 quick shots: 1) frozen full-stretch dive, ball at the fingertips (slow-mo)
     2) whip to the score board 90' 1-1   3) the striker smashes it straight at the camera"""
-    if u < 0.42:                                     # 1) the save that the whole episode builds to
-        w = u / 0.42
+    if True:                                         # the whole hook: the fingertip save in the top corner, outcome hidden
+        w = u
         c = Cam(camX=1.6, camH=1.6, hor=560)
         img = backdrop(560, stadium=True)
         pitch_persp(img, c, Zgoal=6.0, box=False)
