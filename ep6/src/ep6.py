@@ -1407,6 +1407,94 @@ def s_finger_v2(t, u, T):
     return out
 
 
+# ===================== polish pass: faces, reactions, warmth =====================
+def face_closeup(img, sprite, scale=30, cx=360, by=1700, brows=None, sweat=0.0, t=0.0, tear=False):
+    """big head-and-shoulders close-up from a body sprite; brows: 'angry' | 'worried' | None"""
+    sp = paste(img, sprite, scale, cx, by)
+    x0 = cx - sp.width / 2
+    y0 = by - sp.height
+    px = lambda gx, gy: (x0 + (gx + 3) * scale, y0 + (gy + 10) * scale)
+    d = ImageDraw.Draw(img)
+    if brows:
+        for side in (-1, 1):
+            bx, byy = px(8 + side * 2.0, 0.9)
+            tilt = (1 if brows == "angry" else -1) * side
+            d.line([(bx - 1.3 * scale, byy - tilt * 0.35 * scale), (bx + 1.3 * scale, byy + tilt * 0.35 * scale)], fill=OL, width=int(0.55 * scale))
+    if sweat > 0:
+        sx, sy = px(13.4, 1.5 + (t * 1.6 % 1) * 4)
+        d.ellipse([sx - 0.45 * scale, sy - 0.7 * scale, sx + 0.45 * scale, sy + 0.7 * scale], fill=(170, 220, 255), outline=OL, width=3)
+    if tear:
+        tx, ty = px(6.2, 4.4 + (t * 1.2 % 1) * 2)
+        d.ellipse([tx - 0.35 * scale, ty - 0.55 * scale, tx + 0.35 * scale, ty + 0.55 * scale], fill=(170, 220, 255))
+    return sp
+
+
+def s_mason(t, u, T):
+    """'Mason laughs. Told you.' — Mason grins... then cut: Dixon in the reserves' goal, smirking at you"""
+    img, c = shooter_view(t, 30)
+    img = img.filter(ImageFilter.GaussianBlur(3))
+    if u < 0.55:
+        face_closeup(img, mason(mouth="grin" if int(t * 6) % 2 else "smile", look=-1), 26, 360, 1560, brows="angry")
+        return cam(img, 1.02 + 0.06 * u, 360, 820)
+    face_closeup(img, dixon(mouth="smile", look=-1, gloves=True), 26, 360, 1560, brows="angry")
+    return cam(img, 1.06 + 0.06 * u, 360, 820)
+
+
+_getup_prev = s_getup
+
+
+def s_getup(t, u, T):
+    """'You get back up. Like Grandad said.' — and his face appears, warm, like a memory"""
+    img = _getup_prev(t, u, T).convert("RGBA")
+    if u > 0.45:
+        k = ease_out((u - 0.45) / 0.25)
+        r = int(150 * k)
+        if r > 4:
+            port = Image.new("RGBA", (360, 360), (0, 0, 0, 0))
+            pd = ImageDraw.Draw(port)
+            pd.ellipse([0, 0, 359, 359], fill=(250, 214, 150, 255))
+            paste(port, grandad(mouth="smile", blink=int(t * 2) % 5 == 0), 16, 180, 600)
+            mask = Image.new("L", (360, 360), 0)
+            ImageDraw.Draw(mask).ellipse([6, 6, 353, 353], fill=255)
+            port.putalpha(mask)
+            port = port.resize((2 * r, 2 * r), Image.NEAREST)
+            glow_ring(img, 520, 520, r + 26, 0.6 * k, (255, 220, 150))
+            img.alpha_composite(port, (520 - r, 520 - r))
+            ImageDraw.Draw(img).ellipse([520 - r, 520 - r, 520 + r, 520 + r], outline=(255, 236, 190), width=6)
+    return img
+
+
+def s_whistle(t, u, T):
+    """'Final whistle. One, one. The coach wants penalties.' — teammates mob you after the save, then SHOOTOUT"""
+    img, c = shooter_view(t, 9.0, camH=1.9, hor=500)
+    goal3d(img, c, 9.0)
+    jump = abs(math.sin(t * 6)) * 0.25
+    for i, (X, Z, n) in enumerate(((-1.4, 7.6, 4), (1.3, 7.4, 6), (-0.6, 6.6, 9), (0.8, 6.4, 5))):
+        ground_shadow(img, c, X, Z, 0.35)
+        sprite_at(img, c, ours(n, view="back", pose="celebrate", mouth="grin"), X, Z, Y=jump * (0.6 + 0.4 * (i % 2)), height_m=1.55)
+    ground_shadow(img, c, 0.0, 8.6, 0.45)
+    sprite_at(img, c, hero(pose="celebrate", gloves=True, mouth="grin"), 0.0, 8.6, Y=0.2 + jump, height_m=1.6)
+    scoreboard(img, 262, "1ST", "RES", 1, 1, "FULL TIME", 1.0, t=t)
+    if u > 0.55:
+        pill(img, 360, 1080, "SHOOTOUT", (200, 40, 50), spring(t - T - 0.55 * 3.0, 13, 7), 56)
+    return cam(img, 1.04 + 0.05 * u, 360, 760)
+
+
+_pen_prev = s_pen
+
+
+def s_pen(t, u, T, choice=False):
+    """last kick: first a silent close-up of YOUR face (sweat, heartbeat), then the keeper's view"""
+    if not choice and u < 0.45:
+        img, c = keeper_view(t)
+        img = img.filter(ImageFilter.GaussianBlur(4)).convert("RGBA")
+        beat = 1 + 0.03 * max(0, math.sin(t * 7.5)) ** 8
+        face_closeup(img, hero(mouth="flat", gloves=True, blink=int(t * 2.2) % 6 == 0), int(30 * beat), 360, 1720, brows="angry", sweat=1, t=t)
+        img.alpha_composite(Image.new("RGBA", img.size, (60, 0, 0, int(70 * max(0, math.sin(t * 7.5)) ** 8))))   # heartbeat pulse
+        return cam(img, 1.0 + 0.06 * u, 360, 760)
+    return _pen_prev(t, u, T, choice)
+
+
 from PIL import ImageEnhance
 
 

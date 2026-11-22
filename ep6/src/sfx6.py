@@ -39,6 +39,17 @@ whoosh(S[24])
 for q in range(2):
     t0=S[4]+q*D[4]/2; kick(t0+0.05,0.6); thud(t0+0.55*D[4]/2,0.7)
 whistle(S[16]+0.62*D[16],0.6); thud(S[16]+0.6*D[16],1.3); groan(S[16]+0.6*D[16])
+# crowd swells on every save, deep "ooh" on goals against
+for i_ in (13, 14):
+    roar(S[i_]+0.7*D[i_], 1.8, 1.2)
+# the last kick: the stadium goes almost silent, only your heartbeat
+qs, qe = int(S[22]*sr), int(min(N, (S[24])*sr))
+quiet = np.ones(N, np.float32)
+quiet[qs:qe] = 0.12
+quiet = np.convolve(quiet, np.ones(8000)/8000, "same")
+out *= quiet
+for k in range(int((S[24]-S[22])/0.62)):
+    thud(S[22]+0.1+k*0.62, 0.9); thud(S[22]+0.28+k*0.62, 0.55)
 out[-int(.4*sr):]*=np.linspace(1,0,int(.4*sr))
 out/=max(1,np.abs(out).max()/0.9)
 w=wave.open("sfx6.wav","wb");w.setnchannels(1);w.setsampwidth(2);w.setframerate(sr);w.writeframes((out*32767).astype(np.int16).tobytes());w.close()
