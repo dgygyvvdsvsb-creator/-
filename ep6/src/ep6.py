@@ -249,8 +249,20 @@ def office(t):
     sd.rectangle([0, 170, wx1 - wx0, wy1 - wy0], fill=(76, 156, 74))
     for k in range(5):
         sd.rectangle([0, 190 + k * 30, wx1 - wx0, 205 + k * 30], fill=(68, 144, 66))
-    sd.line([(0, 250), (wx1 - wx0, 230)], fill=(240, 244, 236), width=3)
-    sd.rectangle([230, 176, 320, 214], outline=(250, 250, 252), width=4)
+    # pitch seen from the office window, looking toward one goal (lines in perspective)
+    Wn = wx1 - wx0
+    L = (240, 244, 236)
+    cxw, gl = Wn / 2, 186                       # centre, far goal line
+    sd.line([(0, gl), (Wn, gl)], fill=L, width=2)                                   # goal line
+    sd.line([(30, gl), (-40, 330)], fill=L, width=2)                                # left touchline
+    sd.line([(Wn - 30, gl), (Wn + 40, 330)], fill=L, width=2)                       # right touchline
+    sd.polygon([(cxw - 80, gl), (cxw + 80, gl), (cxw + 104, gl + 46), (cxw - 104, gl + 46)], outline=L)   # penalty box
+    sd.polygon([(cxw - 34, gl), (cxw + 34, gl), (cxw + 40, gl + 16), (cxw - 40, gl + 16)], outline=L)      # 6-yard box
+    sd.ellipse([cxw - 3, gl + 31, cxw + 3, gl + 34], fill=L)                          # penalty spot
+    sd.arc([cxw - 46, gl + 22, cxw + 46, gl + 66], 20, 160, fill=L, width=2)         # D
+    sd.line([(0, 312), (Wn, 312)], fill=L, width=3)                                 # halfway line
+    sd.arc([cxw - 90, 290, cxw + 90, 345], 180, 360, fill=L, width=3)               # centre circle
+    sd.rectangle([cxw - 22, gl - 12, cxw + 22, gl], outline=(252, 252, 255), width=3)   # goal
     img.paste(sky, (wx0, wy0))
     d.rectangle([wx0 - 10, wy0 - 10, wx1 + 10, wy1 + 10], outline=(250, 250, 250), width=12)
     d.line([((wx0 + wx1) / 2, wy0), ((wx0 + wx1) / 2, wy1)], fill=(250, 250, 250), width=8)
@@ -832,9 +844,14 @@ def s_okafor(t, u, T):
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([248, 896, 300, 930], 10, fill=(170, 220, 250), outline=OL, width=4)   # ice pack on the knee
     # crutches leaning on the bench
-    for dx in (0, 22):   # crutches leaning on the bench, on Okafor's other side
-        d.line([(150 + dx, 1060), (180 + dx, 700)], fill=OL, width=14)
-        d.line([(150 + dx, 1060), (180 + dx, 700)], fill=(180, 180, 190), width=8)
+    for dx in (0, 24):   # crutches (child size: up to his armpit) leaning on the bench
+        x0, y0, x1, y1 = 160 + dx, 1060, 182 + dx, 830
+        d.line([(x0, y0), (x1, y1)], fill=OL, width=13)
+        d.line([(x0, y0), (x1, y1)], fill=(180, 180, 190), width=7)
+        d.rounded_rectangle([x1 - 16, y1 - 8, x1 + 16, y1 + 6], 5, fill=(60, 60, 70), outline=OL, width=3)   # armpit pad
+        hx, hy = lerp(x0, x1, 0.55), lerp(y0, y1, 0.55)
+        d.rectangle([hx - 12, hy - 4, hx + 12, hy + 4], fill=(60, 60, 70), outline=OL, width=2)             # hand grip
+        d.rectangle([x0 - 6, y0 - 10, x0 + 6, y0], fill=(40, 40, 46))                                      # rubber tip
     paste(img, hero(gloves=True, look=-1), 9, 560, 1060)
     return cam(img, 1 + 0.05 * u, 360, 860)
 
