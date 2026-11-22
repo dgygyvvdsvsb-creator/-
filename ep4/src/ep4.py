@@ -48,7 +48,7 @@ else:   # estimated narration timing (no voice yet)
         VOICE.append((t0, t0 + d_)); t0 += d_ + 0.42
 STARTS = [max(0.0, a - 0.12) for a, _ in VOICE]
 STARTS[0] = 0.0
-TOTAL = VOICE[-1][1] + 1.4
+TOTAL = VOICE[-1][1] + 1.6
 
 
 def D(i):
