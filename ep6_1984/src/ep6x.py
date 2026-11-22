@@ -716,14 +716,16 @@ def s_stretcher(t, u, T):
     d.rectangle([x0 - 10, sy - 6, x0 + 570, sy + 6], fill=(150, 150, 160), outline=OL, width=3)     # poles, end to end
     for hx_ in (x0, x0 + 560):                                                                     # fists on the handles
         d.rounded_rectangle([hx_ - 22, sy - 14, hx_ + 22, sy + 14], 6, fill=SKIN["light"][0], outline=OL, width=3)
-    hx = sx0 + 250                                                    # his gloved hand hangs over the side
-    d.rectangle([hx, sy, hx + 22, sy + 70], fill=KEEPER_G, outline=OL, width=3)
-    d.rectangle([hx - 2, sy + 62, hx + 24, sy + 70], fill=(225, 30, 40))
-    d.rounded_rectangle([hx - 12, sy + 70, hx + 34, sy + 124], 10, fill=(252, 140, 27), outline=OL, width=4)
-    for f_ in range(3):
-        d.line([(hx - 2 + f_ * 12, sy + 100), (hx - 2 + f_ * 12, sy + 122)], fill=(206, 98, 14), width=3)
     rain84(img, t, 120)
     img = ImageEnhance.Color(img.convert("RGB")).enhance(0.55).convert("RGBA")
+    d = ImageDraw.Draw(img)                                           # his gloved hand hangs over the side (kept in full colour)
+    hx = sx0 + 250
+    d.rectangle([hx, sy, hx + 22, sy + 70], fill=KEEPER_G, outline=OL, width=3)
+    d.rectangle([hx - 2, sy + 62, hx + 24, sy + 70], fill=(225, 30, 40))
+    d.rounded_rectangle([hx - 14, sy + 70, hx + 36, sy + 128], 10, fill=(255, 140, 20), outline=OL, width=4)
+    d.rectangle([hx - 14, sy + 70, hx + 36, sy + 82], fill=(210, 96, 10), outline=OL, width=3)     # cuff strap
+    for f_ in range(3):
+        d.line([(hx - 2 + f_ * 12, sy + 104), (hx - 2 + f_ * 12, sy + 126)], fill=(200, 90, 10), width=3)
     return cam(img, 1.0 + 0.05 * u, 360, 800)
 
 
@@ -833,7 +835,6 @@ def s_choice(t, u, T):
 
 def s_end(t, u, T):
     img = choice_bg()
-    choice_cards(img, t, T - 10)
     img = Image.blend(img.convert("RGB"), Image.new("RGB", img.size, (10, 12, 30)), 0.88 * clamp((t - T) / 0.3)).convert("RGBA")
     d = ImageDraw.Draw(img)
     k = spring(t - T, 16, 7)
