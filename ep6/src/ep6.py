@@ -14,6 +14,8 @@ LINES = [
     [("\"WEDNESDAY.", Y), ("FIRST", W), ("TEAM", W), ("AGAINST", W), ("THE", W), ("RESERVES.", B), ("PLAY", W), ("WELL...", W),
      ("YOU", W), ("START", G), ("SATURDAY.\"", Y)],
     [("MONDAY.", W), ("TRAINING.", W), ("NO", Y), ("DAYS", Y), ("OFF.", Y)],
+    [("TUESDAY.", W), ("CROSSES.", B), ("YOU", W), ("CATCH", G), ("EVERY", W), ("ONE.", G)],
+    [("DIXON", B), ("WATCHES.", W), ("HE", W), ("WANTS", W), ("THAT", W), ("SHIRT", Y), ("TOO.", R_)],
     [("YOU'RE", W), ("NOT", R_), ("NUMBER", W), ("ONE.", Y), ("NOT", W), ("YET.", G)],
     [("WEDNESDAY.", W), ("OKAFOR'S", Y), ("STILL", W), ("INJURED.", R_)],
     [("SO", W), ("TODAY", W), ("YOU", G), ("KEEP", G), ("FOR", W), ("THE", W), ("FIRST", Y), ("TEAM.", Y)],
@@ -95,8 +97,8 @@ def opp_keeper(**kw):
 
 
 def score_state(t):
-    l = 1 if t >= STARTS[13] + 0.6 * (STARTS[14] - STARTS[13]) else 0
-    r = 1 if t >= STARTS[8] + 0.35 * (STARTS[9] - STARTS[8]) else 0
+    l = 1 if t >= STARTS[15] + 0.6 * (STARTS[16] - STARTS[15]) else 0
+    r = 1 if t >= STARTS[10] + 0.35 * (STARTS[11] - STARTS[10]) else 0
     return l, r
 
 
@@ -407,13 +409,13 @@ def s_strike(t, u, T, goal_=False):
     else:
         ball_at(img, c, *pts[0])
     if goal_ and u > 0.35:
-        impact_lines(img, *c.p(0.15, 18, 0.3), T + 0.35 * (STARTS[9] - STARTS[8]), t, 10)
+        impact_lines(img, *c.p(0.15, 18, 0.3), T + 0.35 * (STARTS[11] - STARTS[10]), t, 10)
     striker = opp(9, view="back", pose="kick" if u > kick - 0.1 else "run", phase=clamp((u - kick + 0.1) / 0.2) if u > kick - 0.1 else t * 2)
     paste(img, striker, 11, 250, 1420)
     mini_score(img, t, "3'")
     if goal_:
         img = flash(img, 0.35 * clamp(1 - abs(u - 0.37) * 8), (255, 50, 50))
-    return cam(img, 1 + (0.05 * u if not goal_ else 0.12), *c.p(0, 17, 0.8), *shake(t, T + 0.37 * (STARTS[9] - STARTS[8]), .3, 10) if goal_ else (0, 0))
+    return cam(img, 1 + (0.05 * u if not goal_ else 0.12), *c.p(0, 17, 0.8), *shake(t, T + 0.37 * (STARTS[11] - STARTS[10]), .3, 10) if goal_ else (0, 0))
 
 
 def s_goal(t, u, T):
@@ -467,7 +469,7 @@ def s_header(t, u, T):
         a = clamp((u - 0.4) / 0.2)
         ball_trail(img, c, head, a, 0.25)
         ball_at(img, c, *at(head, a))
-        impact_lines(img, *c.p(1.8, 8.6, 2.1), T + 0.4 * (STARTS[12] - T), t, 8)
+        impact_lines(img, *c.p(1.8, 8.6, 2.1), T + 0.4 * (STARTS[14] - T), t, 8)
     else:
         draw_ball(img, gx, gy + 12, 0.9)
         if phase < 0.45:
@@ -497,7 +499,7 @@ def s_1v1(t, u, T):
     big_pose = "celebrate" if u > 0.55 else "ready"
     paste(img, hero(view="back", pose=big_pose, gloves=True), 13, 330, 1430)
     mini_score(img, t, "61'")
-    return cam(img, 1 + 0.04 * u, 360, 800, *shake(t, T + 0.75 * (STARTS[13] - T), .3, 12))
+    return cam(img, 1 + 0.04 * u, 360, 800, *shake(t, T + 0.75 * (STARTS[15] - T), .3, 12))
 
 
 def s_mason_goal(t, u, T):
@@ -524,7 +526,7 @@ def s_mason_goal(t, u, T):
         b = clamp((u - kick - 0.3) / 0.3)
         x, y = c.p(1.9, 15.8, 0.6 * (1 - b))
         draw_ball(img, x, y + 10, 0.8)
-        impact_lines(img, x, y, T + (kick + 0.3) * (STARTS[14] - T), t, 10)
+        impact_lines(img, x, y, T + (kick + 0.3) * (STARTS[16] - T), t, 10)
     paste(img, mason(view="back", pose="kick" if u > kick - 0.1 else "run", phase=clamp((u - kick + 0.1) / 0.2) if u > kick - 0.1 else t * 2), 11, 240, 1330)
     mini_score(img, t, "78'")
     if a >= 1:
@@ -608,11 +610,11 @@ def s_finger(t, u, T):
         bx, by = c.p(2.25 + 0.4 * b, 6.0 + 1.5 * b, 2.05 + 1.0 * math.sin(b * math.pi * 0.8))
     draw_ball(img, bx, by, 1.6)
     if u >= hit:
-        impact_lines(img, *c.p(2.25, 6.0, 2.0), T + hit * (STARTS[18] - T), t, 12)
+        impact_lines(img, *c.p(2.25, 6.0, 2.0), T + hit * (STARTS[20] - T), t, 12)
         glow_ring(img, *c.p(2.25, 6.0, 2.0), 60 + 160 * clamp((u - hit) * 3), 0.9 * (1 - clamp((u - hit) * 2)), (255, 255, 210))
     slowmo_bars(img, 1 - ease_out((u - hit) * 3) if u > hit else 1)
     img = flash(img, 0.45 * clamp(1 - abs(u - hit) * 14))
-    return cam(img, 1.05, 420, 720, *shake(t, T + hit * (STARTS[18] - T), .35, 14))
+    return cam(img, 1.05, 420, 720, *shake(t, T + hit * (STARTS[20] - T), .35, 14))
 
 
 def s_whistle(t, u, T):
@@ -622,7 +624,7 @@ def s_whistle(t, u, T):
     d.rectangle([0, 560, FW, FH], fill=(18, 20, 34))
     scoreboard(img, 640, "1ST", "RES", 1, 1, "FULL TIME", 1.0, t=t)
     if u > 0.55:
-        pill(img, 360, 1000, "SHOOTOUT", (200, 40, 50), spring(t - T - 0.55 * (STARTS[19] - T), 13, 7), 56)
+        pill(img, 360, 1000, "SHOOTOUT", (200, 40, 50), spring(t - T - 0.55 * (STARTS[21] - T), 13, 7), 56)
     return cam(img, 1 + 0.05 * u, 360, 760)
 
 
@@ -649,7 +651,7 @@ def s_pen(t, u, T, choice=False):
                 d.line([pts[j], pts[j + 1]], fill=OL, width=18)
                 d.line([pts[j], pts[j + 1]], fill=col, width=11)
             if k >= 1:
-                pill(img, x1, y1 - 60, lab, bg, spring(t - T - (0.35 if side < 0 else 0.55) * (STARTS[21] - T), 13, 7), 40)
+                pill(img, x1, y1 - 60, lab, bg, spring(t - T - (0.35 if side < 0 else 0.55) * (STARTS[23] - T), 13, 7), 40)
     paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430)
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([210, 252, 510, 308], 12, fill=(14, 16, 30), outline=OL, width=4)
@@ -854,9 +856,9 @@ def shot_reverse(t, w, t_hit):
 
 def s_attack(t, u, T):
     """lines 7+8 as ONE continuous move: one-two around our two defenders, low shot through your legs, goal"""
-    A0, A1 = STARTS[7], STARTS[9]
+    A0, A1 = STARTS[9], STARTS[11]
     v = clamp((t - A0) / (A1 - A0))
-    vs = clamp((STARTS[8] - A0) / (A1 - A0) - 0.03)        # the shot lands on "THROUGH YOUR LEGS"
+    vs = clamp((STARTS[10] - A0) / (A1 - A0) - 0.03)        # the shot lands on "THROUGH YOUR LEGS"
     GZ = 22.0
     p7 = [(0.0, (-1.3, 7.5)), (0.20, (-1.3, 9.5)), (0.42, (-1.1, 12.0)), (0.52, (-0.9, 13.4)), (1.0, (-0.8, 15.5))]
     p9 = [(0.0, (1.5, 9.0)), (0.22, (1.8, 10.2)), (0.40, (1.8, 12.5)), (0.55, (0.9, 14.5)), (vs - 0.08, (0.5, 16.0)), (1.0, (0.4, 16.8))]
@@ -953,7 +955,7 @@ def s_attack(t, u, T):
 def s_attackA(t, u, T):
     """lines 7+8: pass, first-time curler into the top corner, full-stretch dive falls short"""
     import attack2
-    A0, A1 = STARTS[7], STARTS[9]
+    A0, A1 = STARTS[9], STARTS[11]
     w = clamp((t - A0) / (A1 - A0))
     img = attack2.variant_A(t, w).convert("RGBA")
     mini_score(img, t, "3'")
@@ -1039,17 +1041,65 @@ def s_slowmo(t, u, T):
     return cam(img, 1.0 + 0.18 * push, 360 + 160 * push, 700 - 120 * push)
 
 
+def s_crosses(t, u, T):
+    """Tuesday: crosses from the wing, you rise above everyone and catch"""
+    img, c = shooter_view(t, 8.5, camX=-1.0, camH=2.0, hor=470, stadium=False)
+    goal3d(img, c, 8.5)
+    k = int(u * 2); ph = (u * 2) % 1
+    cross = arc((-11.0, 5.5, 0.3), (0.3, 8.2, 2.3), apex=3.0)
+    # an attacker (Dixon in a bib) and a defender jump too, you jump highest
+    jump = math.sin(clamp((ph - 0.35) / 0.4) * math.pi)
+    for X, Z, sp in ((1.4, 7.0, ours(5, view="back", pose="celebrate" if jump > 0.2 else "stand")),
+                     (-0.9, 6.8, ours(7, view="back", pose="celebrate" if jump > 0.2 else "stand"))):
+        ground_shadow(img, c, X, Z, 0.35)
+        sprite_at(img, c, sp, X, Z, Y=0.35 * jump, height_m=1.55)
+    ground_shadow(img, c, 0.3, 8.4, 0.45)
+    hy = 0.75 * jump
+    sprite_at(img, c, hero(pose="celebrate" if jump > 0.15 else "ready", gloves=True, mouth="open" if jump > 0.5 else "flat"), 0.3, 8.4, Y=hy, height_m=1.6)
+    if ph < 0.55:
+        a = ph / 0.55
+        if a > 0.05:
+            pretty_arc(img, c, cross, 1.0, from_=a)
+        ball_trail(img, c, cross, a, 0.08)
+        ball_at(img, c, *at(cross, a))
+    else:   # caught above his head
+        x, y = c.p(0.3, 8.4, 1.6 + hy + 0.55)
+        draw_ball(img, x, y, 0.16 * c.k(8.4) / 6.5)
+        if ph < 0.68:
+            glow_ring(img, x, y, 50, 0.8, (255, 255, 210))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([200, 290, 520, 346], 12, fill=(14, 16, 30), outline=C_Y, width=4)
+    d.text((360, 318), f"CROSSES CAUGHT {k + (1 if ph > 0.55 else 0)}/2", font=font(800, 26), fill=C_Y, anchor="mm")
+    return cam(img, 1.05 + 0.03 * u, 380, 700)
+
+
+def s_dixon_watch(t, u, T):
+    """Dixon by the post, arms folded, staring at you"""
+    img, c = shooter_view(t, 8.5, camH=1.7, hor=500, stadium=False)
+    goal3d(img, c, 8.5)
+    ph = (t * 0.8) % 1
+    keeper_world(img, c, 0.0, 8.5, 1 if int(t * 0.8) % 2 else -1, ph)
+    img = img.filter(ImageFilter.GaussianBlur(3))
+    paste(img, dixon(mouth="flat", look=1, gloves=True, blink=0.6 < u < 0.66), 24, 230, 1560)
+    d = ImageDraw.Draw(img)   # folded arms across his chest
+    d.rounded_rectangle([90, 1040, 380, 1110], 22, fill=(60, 120, 210), outline=OL, width=6)
+    for x in (110, 330):
+        d.rounded_rectangle([x - 34, 1036, x + 34, 1112], 16, fill=(252, 140, 27), outline=OL, width=5)
+    return cam(img, 1.02 + 0.05 * u, 300, 820)
+
+
 from PIL import ImageEnhance
 
 
 def grade(img):
     """muted reference look: less saturation, slightly softer contrast, warm evening tint"""
-    img = ImageEnhance.Color(img).enhance(0.78)
-    img = ImageEnhance.Contrast(img).enhance(0.92)
-    return Image.blend(img, Image.new("RGB", img.size, (60, 50, 70)), 0.07)
+    img = ImageEnhance.Color(img).enhance(0.9)
+    img = Image.blend(img, Image.new("RGB", img.size, (60, 50, 70)), 0.04)
+    w, h = img.size                                     # uniform pixel grid over EVERYTHING (reference look)
+    return img.resize((w // 4, h // 4), Image.BOX).resize((w, h), Image.NEAREST)
 
 
-SCENES = [s_hook, s_knock, s_coach, s_training, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
+SCENES = [s_hook, s_knock, s_coach, s_training, s_crosses, s_dixon_watch, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
           s_header, s_1v1, s_mason_goal, s_board, s_fk, s_slowmo, s_finger, s_whistle, s_pen, s_choice, s_end]
 
 
