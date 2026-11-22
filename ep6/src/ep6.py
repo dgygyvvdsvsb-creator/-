@@ -741,24 +741,32 @@ def s_training(t, u, T):
     for X, Z in ((-5, 4), (-2.5, 3.5), (2.5, 3.5), (5, 4)):     # cones
         x, y = c.p(X, Z); r = 0.18 * c.k(Z)
         d.polygon([(x - r, y), (x + r, y), (x, y - r * 2.2)], fill=(252, 140, 27), outline=OL)
-    k = int(u * 3); phase = (u * 3) % 1
-    side = 1 if k % 2 else -1
-    gx, gy = keeper_world(img, c, 0, 8.5, side, phase)
-    shot = arc((-0.05, 2.4, 0.0), (side * 1.5, 8.5, 0.95), apex=0.45)   # starts at Dixon's boot
-    if phase < 0.33:                                       # fast shot, arrives at full stretch
-        a = phase / 0.33
+    k = min(2, int(u * 3)); phase = (u * 3) % 1 if u < 1 else 1.0
+    # 1) low drive to the left -> low dive   2) straight at the chest -> catch standing   3) high to the right -> flying catch
+    kind = ["low", "chest", "high"][k]
+    side = -1 if kind == "low" else 1
+    if kind == "chest":
+        ground_shadow(img, c, 0, 8.5, 0.45)
+        sprite_at(img, c, hero(pose="catch" if phase > 0.3 else "ready", gloves=True), 0, 8.5, height_m=1.6)
+        gx, gy = c.p(0, 8.5, 1.05)
+        shot = arc((-0.05, 2.4, 0.0), (0, 8.3, 1.05), apex=0.3)
+        tcatch = 0.3
+    else:
+        pk = 0.3 if kind == "low" else 1.25
+        gx, gy = keeper_world(img, c, 0, 8.5, side, phase, peak=pk)
+        shot = arc((-0.05, 2.4, 0.0), (side * 2.0, 8.5, pk + 0.05), apex=0.2 if kind == "low" else 0.8)
+        tcatch = 0.33
+    if phase < tcatch:
+        a = phase / tcatch
         ball_trail(img, c, shot, a, 0.15)
         ball_at(img, c, *at(shot, a))
     else:
         draw_ball(img, gx, gy + 14, 0.16 * c.k(8.5) / 6.5)
-        if phase < 0.42:
-            glow_ring(img, gx, gy, 55, 0.8, (255, 255, 210))       # caught: same size as in flight at the goal
+        if phase < tcatch + 0.09:
+            glow_ring(img, gx, gy, 55, 0.8, (255, 255, 210))
     ground_shadow(img, c, -3.6, 7.2, 0.4)
     sprite_at(img, c, coach(look=1), -3.6, 7.2, height_m=1.75)   # beside the goal, watching
     paste(img, dixon(view="back", pose="kick" if phase < 0.25 else "stand", phase=clamp(phase / 0.2), gloves=False), 11, 300, 1330)  # Dixon takes the shots
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle([200, 252, 520, 308], 12, fill=(14, 16, 30), outline=C_Y, width=4)
-    d.text((360, 280), f"CATCHES {int(1 + 60 * u)}", font=font(800, 28), fill=C_Y, anchor="mm")
     return cam(img, 1 + 0.03 * u, 360, 700)
 
 
@@ -1085,7 +1093,7 @@ def s_crosses(t, u, T):
     sd = -1 if k == 0 else 1                         # wing side: left first, then right
     GZ, KX = 8.5, 0.15 * sd
     wing = (2.5 * sd, 3.4)                           # winger nearer the camera, on the flank                           # winger on the flank
-    head = (0.6 * -sd, 5.6)                          # striker in the middle
+    head = (-1.0 * (1 if k == 0 else -1), 5.6)        # header taken away from where the keeper will dive                          # striker in the middle
     other = (-1.7 * -sd, 6.4)                        # a defender marking (stays on the ground)
     c = Cam(camX=1.3 * sd, camH=2.2, hor=560, f=560)
     img = backdrop(560, stadium=False)
@@ -1098,19 +1106,22 @@ def s_crosses(t, u, T):
     # winger
     ground_shadow(img, c, *wing, 0.35)
     sprite_at(img, c, ours(7 if k == 0 else 11, view="back", pose="kick" if ph < kick + 0.05 else "stand", phase=clamp(ph / kick)), *wing, height_m=1.55)
-    # defender, stays down
-    ground_shadow(img, c, *other, 0.35)
-    sprite_at(img, c, ours(4, view="back", pose="stand"), *other, height_m=1.55)
     # striker: jumps for the header
     hj = 0.45 * math.sin(clamp((ph - (hit - 0.12)) / 0.24) * math.pi)
     ground_shadow(img, c, *head, 0.35)
     sprite_at(img, c, ours(9 if k == 0 else 10, view="back", pose="celebrate" if hj > 0.05 else "stand"), *head, Y=hj, height_m=1.55)
-    # keeper: set, then jumps to meet the header and catches it above his head
-    kj = 0.55 * math.sin(clamp((ph - (catch - 0.16)) / 0.34) * math.pi)
-    caught = ph >= catch
-    ground_shadow(img, c, KX, GZ - 0.1, 0.45)
-    sprite_at(img, c, hero(pose="celebrate" if (kj > 0.05 or caught) else "ready", gloves=True, mouth="open" if kj > 0.3 else "flat"),
-              KX, GZ - 0.1, Y=kj, height_m=1.6)
+    # keeper: header #1 goes high to one corner -> flying catch; header #2 low to the other side -> low dive
+    dside = 1 if k == 0 else -1
+    pk = 1.3 if k == 0 else 0.3
+    tgt = (KX + dside * 2.0, GZ - 0.1, pk + 0.05)
+    header = arc((head[0], head[1], 1.95), tgt, apex=0.15)
+    if ph < hit:
+        kp = 0.05
+    elif ph < catch:
+        kp = 0.12 + 0.26 * (ph - hit) / (catch - hit)
+    else:
+        kp = 0.38 + 0.62 * (ph - catch) / (1 - catch)
+    gx, gy = keeper_world(img, c, KX, GZ - 0.1, dside, kp, peak=pk)
     if ph < kick:
         ball_at(img, c, wing[0] - 0.3 * sd, wing[1] + 0.2, 0.11)
     elif ph < hit:
@@ -1124,21 +1135,13 @@ def s_crosses(t, u, T):
             impact_lines(img, *c.p(head[0], head[1], 1.95), 0, a * 0.6, 8)
         ball_trail(img, c, header, a, 0.15)
         ball_at(img, c, *at(header, a))
-    else:   # held in front of him, above his head, both gloves on it
-        sc = 1.6 * c.k(GZ - 0.1) / 31
-        fx, fy = c.p(KX, GZ - 0.1, kj)
-        rb = 3.6 * sc
-        bx_, by_ = fx - 0.5 * sc, fy - 37 * sc + 11.5 * sc - 6.0 * sc
-        draw_ball(img, bx_, by_ + rb, rb / 6.5)
-        dg = ImageDraw.Draw(img)
-        for sg in (-1, 1):
-            gx_ = bx_ + sg * (rb + 0.4 * sc); gy_ = by_ + 0.8 * sc
-            dg.rounded_rectangle([gx_ - 1.5 * sc, gy_ - 2.0 * sc, gx_ + 1.5 * sc, gy_ + 2.0 * sc], int(0.8 * sc), fill=(252, 140, 27), outline=OL, width=max(2, int(sc * 0.5)))
+    else:
+        draw_ball(img, gx, gy + 10, 0.16 * c.k(GZ) / 6.5)
         if ph < catch + 0.12:
-            glow_ring(img, bx_, by_ + rb, 46, 0.8, (255, 255, 210))
+            glow_ring(img, gx, gy, 46, 0.8, (255, 255, 210))
     # camera: wide for the cross, pushes in on you for the header and the catch
     z = 1.2 + 0.6 * ease_in_out(clamp((ph - hit + 0.05) / 0.25))
-    tx, ty = c.p(KX, GZ, 1.2)
+    tx, ty = c.p(KX + 0.8 * (1 if k == 0 else -1), GZ, 1.0)
     return cam(img, z, lerp(360, tx, ease_in_out(clamp((ph - hit) / 0.2))), lerp(760, ty, ease_in_out(clamp((ph - hit) / 0.2))))
 
 
@@ -1190,7 +1193,6 @@ def s_1v1_v2(t, u, T):
     sprite_at(img, c, opp(7, view="back", pose="kick" if u > shot_t - 0.05 and u < shot_t + 0.1 else "run",
                          phase=clamp((u - shot_t + 0.05) / 0.1) if u > shot_t - 0.05 else t * 2.6), rx, rz, height_m=1.55)
     if u < shot_t:
-        ring_on_grass(img, c, rx, rz, 0.6, C_Y, 4)
         run_path = arc((rx + 0.45, rz + 0.22, 0.0), (0.6, 12.8, 0.0), apex=0.0)
         dotted_path(img, c, run_path, 1.0, from_=0.0)
         ball_at(img, c, rx + 0.45, rz + 0.22, 0.11)        # at his right boot, in front
@@ -1244,13 +1246,16 @@ def s_foul(t, u, T):
     if u < lose:
         ground_shadow(img, c, mx, mz, 0.35)
         sprite_at(img, c, mason(view="back", pose="run", phase=t * 2.4), mx, mz, height_m=1.55)
-    else:
-        fk = clamp((u - lose) / 0.15)
+    else:   # loses the ball: stumbles, stays on his feet, then chases
+        fk = clamp((u - lose) / 0.12)
+        wob = 14 * math.sin(fk * math.pi)
+        ground_shadow(img, c, mx, mz, 0.35)
         k = 1.55 * c.k(mz) / 31
-        spm = mason(view="back", pose="stand", mouth="open").resize((int(24 * k), int(39 * k)), Image.NEAREST).rotate(80 * ease_out(fk), expand=True, resample=Image.NEAREST)
-        x, y = c.p(mx - 0.4 * fk, mz)
-        ground_shadow(img, c, mx - 0.4 * fk, mz, 0.5)
-        img.alpha_composite(spm, (int(x - spm.width / 2), int(y - spm.height + 6)))
+        spm = mason(view="back", pose="run" if fk >= 1 else "stand", phase=t * 2.4, mouth="open").resize((int(24 * k), int(39 * k)), Image.NEAREST)
+        if wob:
+            spm = spm.rotate(wob, expand=True, resample=Image.NEAREST)
+        x, y = c.p(mx, mz)
+        img.alpha_composite(spm, (int(x - spm.width / 2), int(y - spm.height + 2 * k)))
     # captain: before the steal he runs in from the right toward Mason's ball, after it he carries it at the box
     if u < lose:
         cx = lerp(1.6, mx + 0.6, ease_in_out(u / lose)); cz = lerp(8.5, mz + 0.4, ease_in_out(u / lose))

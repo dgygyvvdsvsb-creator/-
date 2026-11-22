@@ -298,7 +298,7 @@ def scoreboard(img, y, left, right, sl, sr, minute, k=1.0, flash_side=None, t=0)
     d.text((FW / 2, y + 150), minute, font=font(800, 36), fill=(240, 80, 80), anchor="mm")
 
 
-def keeper_world(img, cam, X, Z, side, phase, height_m=1.6, sprite=None):
+def keeper_world(img, cam, X, Z, side, phase, height_m=1.6, sprite=None, peak=0.9):
     """animated save on the goal line at (X,Z):
        0.00-0.12 set (knees bend)  0.12-0.30 explosive push + flight to the ball (fast)
        0.30-0.38 catch at full stretch   0.38-0.55 falls under gravity onto the grass, small bounce
@@ -314,12 +314,13 @@ def keeper_world(img, cam, X, Z, side, phase, height_m=1.6, sprite=None):
     if phase < 0.38:                                   # take-off and flight (ease-out = fast start)
         a = ease_out((phase - 0.12) / 0.26)
         Xc = X + side * 1.5 * a
-        Yc = 0.35 + 0.55 * math.sin(a * math.pi * 0.5)  # rises to the ball
+        lo = min(0.35, peak)
+        Yc = lo + (peak - lo) * math.sin(a * math.pi * 0.5)  # rises (or skims) to the ball
         rot = 90 * ease_out(min(1.0, a * 1.6))
     elif phase < 0.55:                                 # gravity: drop to the grass, small bounce
         f = (phase - 0.38) / 0.17
         Xc = X + side * (1.5 + 0.25 * f)
-        Yc = 0.9 * (1 - f) ** 2 + 0.08 * abs(math.sin(f * math.pi * 2)) * (1 - f)
+        Yc = peak * (1 - f) ** 2 + 0.08 * abs(math.sin(f * math.pi * 2)) * (1 - f)
         rot = 90
     elif phase < 0.68:                                 # short moment on the grass
         Xc = X + side * 1.75
