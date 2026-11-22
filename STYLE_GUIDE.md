@@ -1,0 +1,43 @@
+# From Zero to Legend — STYLE GUIDE (copy the remi_sport examples 1:1)
+
+Reference videos: `style_refs/example_1..8.mp4` (+ `*_sheet.png` = one frame every 2 s, `key_frames.png`).
+Every new episode must look like these. Read this file before starting any episode.
+
+## Canvas, pixels, colours
+- Vertical 9:16, everything is chunky pixel art with ONE uniform pixel grid (crisp, no blur, no smoothing).
+- Characters: small sprites with a 1-px dark outline and one shadow tone. Mid shots: body ~1/5–1/4 of frame height.
+  Foreground "over-the-shoulder" player: huge back view at the bottom (number on the back), cut by the frame edge.
+- Grass: saturated mid green with mowing stripes, approx (36,132,60) / (42,150,72). White lines, perspective boxes.
+- Backgrounds: stadium = dense pixel crowd in many colours + ad boards; training = trees (round canopies) + fence.
+- UI / info scenes: deep navy background (5,9,24) → (29,60,118) with a subtle diagonal diamond/checker pattern and a soft
+  centre glow. Used for tables, phone screens, contracts, cards, maps, stats, the final choice.
+
+## Text
+- Top banner, small: `EP. N · FROM ZERO TO LEGEND` (LEGEND in yellow), ~5% from the top.
+- Caption under it: big white bold (Poppins ExtraBold), 1–2 lines, karaoke: unspoken words grey, spoken words white,
+  key words coloured (yellow / teal-green / red / blue). Thin dark edge only — no fat outline boxes.
+- Lower-third info bar: dark rounded box, yellow border, yellow title + small white line under it
+  (e.g. "MARCH · VS METZ" / "1 GOAL, 2 ASSISTS").
+- Never put speech bubbles or name tags over players (series rule). Dialogue = captions only.
+
+## Shots that make the look (use them in every episode)
+1. Hook = the most dramatic action frame of the episode, full colour on frame 0 (no flash, no black).
+2. Over-the-shoulder: our player's back big in the foreground, the play in perspective behind.
+3. Close-ups: pixel ball filling the frame, the net/top corner, a face reacting.
+4. Data screens on navy: league table with coloured rows + "TOP 4" tag, scoreboard with crests + minute in red,
+   player card (rating, position, age), big counters (0 → 124), phone incoming call / social post with likes,
+   contract / envelope / letter, map, calendar, trophy bracket.
+5. Life scenes between football: bedroom at night with window, kitchen table with family, locker room,
+   a training drill (rope, pool, cones) with a day counter ("DAY 20").
+6. Match beats: broadcast angle with pass lines (dashed) and a yellow curved shot arc, glow ring at contact,
+   impact lines, slow motion, then the score bar update.
+7. Pace: new shot every 1.5–3 s; caption chunk every ~1 s.
+
+## Ending (always the same structure)
+- Navy screen, two option cards side by side: pixel image inside, coloured border (yellow / teal), label under it,
+  tiny explanatory line under the label; a comment field above that types the answer; caption
+  "WRITE X OR Y IN THE COMMENTS" → "FOR PART N." Keep it ~5 s, then FOLLOW / SUBSCRIBE card.
+
+## Audio
+- One narrator (George, ElevenLabs eleven_v4), second person, short sentences. No music. SFX: crowd, kicks, net, whistle,
+  heartbeat for tension; near-silence before the decisive moment.

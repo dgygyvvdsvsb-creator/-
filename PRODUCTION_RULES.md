@@ -46,3 +46,6 @@ Reference: remi_sport "De zéro à champion du monde" EP7 (85 s).
 - NO speech bubbles and NO name tags above characters. Dialogue appears ONLY in the captions.
 - Keepers diving must land on the grass after the dive; catches = ball stays in the gloves.
 - Objects passed between characters are held in their hands, never floating.
+
+## STYLE = STYLE_GUIDE.md (user decision, permanent)
+Copy the remi_sport examples in style_refs/ 1:1. Read STYLE_GUIDE.md before every episode.
