@@ -98,6 +98,10 @@ def opp_keeper(**kw):
     return dixon(**kw)
 
 
+def _g(v):
+    return max(3, int(round(v / 3.0)) * 3)
+
+
 DEFER = []          # text/labels drawn after the pixel grade, so they stay crisp
 _pill_raw = pill
 _scoreboard_raw = scoreboard
@@ -166,7 +170,7 @@ def s_hook(t, u, T):
         pitch_persp(img, c, Zgoal=6.0, box=False)
         goal3d(img, c, 6.0)
         sc = 1.6 * c.k(6.0) / 31
-        sp = hero(pose="reach", gloves=True, mouth="open").resize((int(24 * sc), int(39 * sc)), Image.NEAREST).rotate(-55, expand=True, resample=Image.NEAREST)
+        sp = hero(pose="reach", gloves=True, mouth="open").resize((24 * _g(sc), 39 * _g(sc)), Image.NEAREST).rotate(-55, expand=True, resample=Image.NEAREST)
         kx, ky = c.p(lerp(1.15, 1.3, w), 6.0, 1.15 + 0.05 * w)
         ground_shadow(img, c, 1.2, 6.0, 0.8, 70)
         img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
@@ -505,7 +509,7 @@ def s_getup(t, u, T):
     if u < 0.45:
         draw_ball(img, *c.p(1.2, 10.9, 0), 1.0)
         sp_s = 1.6 * c.k(9.9) / 31
-        sp = hero(pose="reach", gloves=True, blink=True).resize((int(24 * sp_s), int(39 * sp_s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
+        sp = hero(pose="reach", gloves=True, blink=True).resize((24 * _g(sp_s), 39 * _g(sp_s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
         x, y = c.p(0.2, 9.9)
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * sp_s)))
     else:
@@ -581,7 +585,7 @@ def s_mason_goal(t, u, T):
         sprite_at(img, c, opp_keeper(pose="ready"), 0, 15, height_m=1.6)
     else:   # their keeper dives the wrong way
         s = 1.6 * c.k(15) / 31
-        sp = opp_keeper(pose="celebrate").resize((int(24 * s), int(39 * s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
+        sp = opp_keeper(pose="celebrate").resize((24 * _g(s), 39 * _g(s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
         x, y = c.p(-1.2 * ease_out(clamp((u - kick) / 0.4)), 15, 0.4 * math.sin(clamp((u - kick) / 0.4) * math.pi))
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height)))
     if a < 1:
@@ -662,7 +666,7 @@ def s_finger(t, u, T):
     goal3d(img, c, 6.0)
     k_ = c.k(6.0)
     sc = 1.6 * k_ / 31
-    sp = hero(pose="reach", gloves=True, mouth="open").resize((int(24 * sc), int(39 * sc)), Image.NEAREST)
+    sp = hero(pose="reach", gloves=True, mouth="open").resize((24 * _g(sc), 39 * _g(sc)), Image.NEAREST)
     sp = sp.rotate(-55, expand=True, resample=Image.NEAREST)
     fly = clamp(u / 0.5)
     kx, ky = c.p(lerp(0.9, 1.35, fly), 6.0, lerp(1.05, 1.25, math.sin(fly * math.pi)))
@@ -1286,7 +1290,7 @@ def s_foul(t, u, T):
         wob = 14 * math.sin(fk * math.pi)
         ground_shadow(img, c, mx, mz, 0.35)
         k = 1.55 * c.k(mz) / 31
-        spm = mason(view="back", pose="run" if fk >= 1 else "stand", phase=t * 2.4, mouth="open").resize((int(24 * k), int(39 * k)), Image.NEAREST)
+        spm = mason(view="back", pose="run" if fk >= 1 else "stand", phase=t * 2.4, mouth="open").resize((24 * _g(k), 39 * _g(k)), Image.NEAREST)
         if wob:
             spm = spm.rotate(wob, expand=True, resample=Image.NEAREST)
         x, y = c.p(mx, mz)
@@ -1303,7 +1307,7 @@ def s_foul(t, u, T):
     ground_shadow(img, c, sx, sz, 0.45)
     if u > 0.45:   # slide tackle: lying on his side, feet first
         k = 1.55 * c.k(sz) / 31
-        sp = ours(5, pose="reach").resize((int(24 * k), int(39 * k)), Image.NEAREST).rotate(-95, expand=True, resample=Image.NEAREST)
+        sp = ours(5, pose="reach").resize((24 * _g(k), 39 * _g(k)), Image.NEAREST).rotate(-95, expand=True, resample=Image.NEAREST)
         x, y = c.p(sx, sz)
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height * 0.8)))
     else:
@@ -1319,7 +1323,7 @@ def s_foul(t, u, T):
     else:
         f = clamp((u - foul) / 0.25)
         k = 1.55 * c.k(cz) / 31
-        sp = opp(10, view="back", pose="celebrate", mouth="open").resize((int(24 * k), int(39 * k)), Image.NEAREST).rotate(-75 * ease_out(f), expand=True, resample=Image.NEAREST)
+        sp = opp(10, view="back", pose="celebrate", mouth="open").resize((24 * _g(k), 39 * _g(k)), Image.NEAREST).rotate(-75 * ease_out(f), expand=True, resample=Image.NEAREST)
         x, y = c.p(cx + 0.4 * f, cz + 0.6 * f, 0.5 * math.sin(f * math.pi))
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height)))
         ball_at(img, c, cx + 0.3 + 1.5 * f, cz + 1.2 + 2.0 * f, 0.11)
@@ -1362,7 +1366,7 @@ def s_finger_v2(t, u, T):
         kxw = 1.55 + 0.35 * (u - contact)
     sc = 1.6 * c.k(GZ) / 31.0
     rot = -70 if u <= contact + 0.1 else -70 - 25 * clamp((u - contact - 0.1) / 0.3)
-    sp = hero(pose="reach", gloves=True, mouth="open").resize((int(24 * sc), int(39 * sc)), Image.NEAREST)
+    sp = hero(pose="reach", gloves=True, mouth="open").resize((24 * _g(sc), 39 * _g(sc)), Image.NEAREST)
     sp = sp.rotate(rot, expand=True, resample=Image.NEAREST)
     kx, ky = c.p(kxw, GZ, kyw)
     ground_shadow(img, c, kxw, GZ, 0.8, 80)

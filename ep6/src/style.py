@@ -80,7 +80,17 @@ def outline(im, col=OL):
             dil |= p[dy:dy + a.shape[0], dx:dx + a.shape[1]]
     ring = dil & ~a
     arr = np.array(im)
-    arr[ring] = col + (255,)
+    rgb = arr[..., :3].astype(np.int32)
+    src = np.zeros_like(rgb)
+    found = np.zeros(a.shape, bool)
+    pr = np.pad(rgb, ((1, 1), (1, 1), (0, 0)))
+    for dy, dx in ((1, 0), (1, 2), (0, 1), (2, 1), (0, 0), (0, 2), (2, 0), (2, 2)):
+        nb = p[dy:dy + a.shape[0], dx:dx + a.shape[1]] & ~found
+        src[nb] = pr[dy:dy + a.shape[0], dx:dx + a.shape[1]][nb]
+        found |= nb
+    dark = (src * 0.32 + np.array(col) * 0.5).clip(0, 255).astype(np.uint8)
+    arr[ring, :3] = dark[ring]
+    arr[ring, 3] = 255
     return Image.fromarray(arr, "RGBA")
 
 
@@ -102,10 +112,10 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         if pose == "run":
             s = math.sin(phase * math.tau)
             off = int(round(s * 2))
-            for lx, o in ((5, off), (10, -off)):
-                R(lx, 18 + max(0, -o) // 2, lx + 2, 21, sk)
-                R(lx + o // 2, 22, lx + 2 + o // 2, 25 - max(0, o) // 2, kit.socks)
-                R(lx - 1 + o // 2, 26 - max(0, o) // 2, lx + 2 + o // 2, 27 - max(0, o) // 2, OL)
+            for lx, o in ((5, off), (11, -off)):
+                R(lx, 18 + max(0, -o) // 2, lx + 1, 21, sk)
+                R(lx + o // 2, 22, lx + 1 + o // 2, 25 - max(0, o) // 2, kit.socks)
+                R(lx - 1 + o // 2, 26 - max(0, o) // 2, lx + 1 + o // 2, 27 - max(0, o) // 2, OL)
         elif pose == "kick":
             R(5, 18, 7, 21, sk); R(5, 22, 7, 25, kit.socks); R(4, 26, 7, 27, OL)
             k = phase  # 0 back .. 1 through
@@ -131,23 +141,23 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
             R(4, 26, 7, 26, OL); R(10, 26, 13, 26, OL)
         else:
             spread = 1 if pose in ("ready", "celebrate") else 0
-            for lx in (5 - spread, 10 + spread):
-                R(lx, 18, lx + 2, 21, sk)
-                R(lx, 22, lx + 2, 25, kit.socks)
-                R(lx, 23, lx + 2, 23, shade(kit.socks, 0.85))
-                R(lx - (1 if lx < 8 else 0), 26, lx + 2 + (1 if lx > 8 else 0), 27, OL)
-                R(lx, 26, lx + 2, 26, (60, 60, 70))
+            for lx in (5 - spread, 11 + spread):          # slim legs with a clear gap (reference proportions)
+                R(lx, 18, lx + 1, 21, sk)
+                R(lx, 22, lx + 1, 25, kit.socks)
+                R(lx, 23, lx + 1, 23, (250, 250, 250))       # sock stripe
+                R(lx - (1 if lx < 8 else 0), 26, lx + 1 + (1 if lx > 8 else 0), 27, OL)
+                R(lx, 26, lx + 1, 26, (240, 240, 240))       # white boot
 
     legs()
     # shorts
     if pose not in ("sit", "hurt"):
-        R(4, 15, 13, 18, kit.shorts)
-        R(11, 15, 13, 18, shade(kit.shorts))
+        R(5, 15, 12, 18, kit.shorts)
+        R(11, 15, 12, 18, shade(kit.shorts))
         R(8, 17, 9, 18, shade(kit.shorts, 0.7))
     # torso
-    R(3, 8, 14, 15, kit.shirt)
-    R(12, 8, 14, 15, shade(kit.shirt))
-    R(6, 8, 11, 8, shade(kit.shirt, 0.6))  # collar
+    R(4, 8, 13, 15, kit.shirt)
+    R(12, 8, 13, 15, shade(kit.shirt))
+    R(7, 8, 10, 8, shade(kit.shirt, 0.6))  # collar
     if view == "back" and kit.number is not None:
         _num(d, ox + 9 - 2 * len(str(kit.number)), oy + 9, kit.number, kit.num_col)
     elif view == "front" and kit.number is not None:
@@ -157,7 +167,7 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         _num(d, ox + 9 - 2 * (len(g) - 1), oy + 10, g, kit.num_col)   # full number (10 must not read as 0)
     # arms
     def arm(side, hx, hy):
-        sx = 2 if side < 0 else 15
+        sx = 3 if side < 0 else 14
         sy = 9
         steps = max(abs(hx - sx), abs(hy - sy), 1)
         for i in range(steps + 1):
@@ -201,14 +211,16 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 6, 12); arm(1, 11, 12)
         R(7, 10, 10, 13, (30, 32, 44)); R(8, 11, 9, 12, (120, 190, 255))
     # head
-    R(4, 0, 13, 7, sk)
-    R(11, 1, 13, 7, skd)
+    R(5, 0, 12, 7, sk)
+    R(11, 1, 12, 7, skd)
+    if view == "front":
+        R(4, 3, 4, 4, sk); R(13, 3, 13, 4, skd)   # ears
     if view == "front":
         # hair styles
         if style == "short":
-            R(4, -1, 13, 1, hc); R(4, 2, 4, 3, hc); R(13, 2, 13, 3, hc); R(7, 2, 8, 2, hc)
+            R(5, -1, 12, 1, hc); R(5, 2, 5, 2, hc); R(12, 2, 12, 2, hc); R(7, 2, 8, 2, hc); P(6, -1, shade(hc, 1.5))
         elif style == "curly":
-            R(3, -2, 14, 1, hc); R(2, 1, 3, 5, hc); R(14, 1, 15, 5, hc)
+            R(4, -2, 13, 1, hc); R(3, 1, 4, 5, hc); R(13, 1, 14, 5, hc)
             for x in range(2, 16, 2):
                 R(x, -4, x, -3, hc)            # bumpy curly top
             for x in range(3, 15, 2):
@@ -218,13 +230,13 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
             for x in (5, 9, 12):
                 P(x, -1, shade(hc, 1.35))       # curl highlights
         elif style == "spiky":
-            R(4, -1, 13, 1, hc); R(4, 2, 4, 2, hc); R(13, 2, 13, 2, hc)
-            for x in (4, 7, 10, 13):
+            R(5, -1, 12, 1, hc); R(5, 2, 5, 2, hc); R(12, 2, 12, 2, hc)
+            for x in (5, 7, 9, 11):
                 R(x, -3, x + 1, -2, hc)
         elif style == "bald":
-            R(3, 2, 4, 5, hc); R(13, 2, 14, 5, hc); R(5, 0, 8, 0, (250, 220, 196))
+            R(4, 2, 5, 5, hc); R(12, 2, 13, 5, hc); R(6, 0, 8, 0, (250, 220, 196))
         elif style == "pony":
-            R(4, -1, 13, 1, hc); R(3, 1, 4, 6, hc); R(13, 1, 14, 6, hc); R(14, 4, 15, 9, hc)
+            R(5, -1, 12, 1, hc); R(4, 1, 5, 6, hc); R(12, 1, 13, 6, hc); R(13, 4, 14, 9, hc)
         elif style == "cap":   # proper football cap: rounded crown, club logo, brim over the eyes
             NAVY, NAVY_D = (34, 46, 96), (22, 30, 66)
             R(4, -3, 13, -3, NAVY); R(3, -2, 14, 1, NAVY); R(11, -2, 14, 1, NAVY_D)
@@ -234,12 +246,16 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         # face
         ey = 3
         if blink:
-            R(6 + look, ey + 1, 6 + look, ey + 1, OL); R(10 + look, ey + 1, 10 + look, ey + 1, OL)
+            R(6, ey + 1, 7, ey + 1, shade(sk, 0.55)); R(10, ey + 1, 11, ey + 1, shade(sk, 0.55))
         else:
-            for ex in (6, 10):
-                P(ex + look, ey, (250, 250, 250)); P(ex + look, ey + 1, OL)
-        R(5, ey - 1, 7, ey - 1, shade(hc, 0.8) if style != "bald" else (200, 200, 210))
-        R(9, ey - 1, 11, ey - 1, shade(hc, 0.8) if style != "bald" else (200, 200, 210))
+            lk = max(-1, min(1, look))
+            for ex, side in ((6, -1), (10, 1)):
+                R(ex, ey, ex + 1, ey + 1, (250, 250, 250))                    # eye white (2x2)
+                px_ = ex + (1 if lk > 0 else 0) if lk else ex + (1 if side < 0 else 0)
+                R(px_, ey, px_, ey + 1, (24, 20, 28))                         # pupil
+        bc = shade(hc, 0.55) if style != "bald" else (200, 200, 210)
+        R(6, ey - 1, 7, ey - 1, bc); R(10, ey - 1, 11, ey - 1, bc)          # thick brows
+        P(9, ey + 2, skd)                                                    # nose shadow
         if mouth == "open":
             R(7, 5, 9, 6, (150, 40, 50))
         elif mouth == "smile":
@@ -249,10 +265,11 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         elif mouth == "sad":
             R(7, 5, 9, 5, (150, 40, 50)); P(6, 6, (150, 40, 50)); P(10, 6, (150, 40, 50))
         else:
-            R(7, 6, 9, 6, (170, 80, 80))
+            R(8, 6, 9, 6, (150, 60, 60))
     else:  # back of the head
-        R(4, -1, 13, 6, hc)
-        R(4, 6, 13, 7, skd)
+        R(5, -1, 12, 6, hc)
+        R(5, 6, 12, 7, skd)
+        R(4, 3, 4, 4, sk); R(13, 3, 13, 4, skd)   # ears from behind
         if style == "curly":
             R(3, -2, 14, 6, hc)
             for x in range(2, 16, 2):
@@ -338,13 +355,14 @@ def big(sprite, scale):
 
 def paste(img, sprite, scale, cx, by, rot=0, alpha=1.0):
     """paste a sprite scaled with NEAREST, anchored at bottom-centre (cx, by) in full-res coords"""
-    s = big(sprite, max(1, int(scale)))
+    sc = max(3, int(round(scale / 3.0)) * 3) if scale >= 3 else max(1, int(scale))   # snap to the 3-px grid
+    s = big(sprite, sc)
     if rot:
         s = s.rotate(rot, resample=Image.NEAREST, expand=True)
     if alpha < 1:
         a = s.split()[3].point(lambda v: int(v * alpha))
         s.putalpha(a)
-    img.alpha_composite(s, (int(cx - s.width / 2), int(by - s.height)))
+    img.alpha_composite(s, (int(round((cx - s.width / 2) / 3) * 3), int(round((by - s.height) / 3) * 3)))
     return s
 
 
