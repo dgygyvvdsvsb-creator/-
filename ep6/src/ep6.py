@@ -1080,51 +1080,66 @@ def s_slowmo(t, u, T):
 
 
 def s_crosses(t, u, T):
-    """Tuesday: crosses from the wing, you rise above everyone and catch"""
+    """Tuesday: a winger crosses, a striker heads it at goal, you jump and catch it. Twice, from both wings."""
     k = min(1, int(u * 2)); ph = (u * 2) % 1 if u < 1 else 1.0
-    # two different crosses: 1) floated from the LEFT wing, 2) whipped in from the RIGHT, he steps across
-    V = [dict(camX=-1.0, camH=2.0, kx=0.3, src=(-11.0, 5.5, 0.3), apex=3.0, mates=((1.4, 7.0, 5), (-0.9, 6.8, 7))),
-         dict(camX=1.2, camH=2.6, kx=1.1, src=(10.5, 4.0, 0.2), apex=1.4, mates=((-0.6, 6.4, 4), (2.3, 7.2, 6)))][k]
-    img, c = shooter_view(t, 8.5, camX=V["camX"], camH=V["camH"], hor=470, stadium=False)
-    goal3d(img, c, 8.5)
-    KX = lerp(0.3, V["kx"], ease_out(clamp(ph / 0.4))) if k == 1 else 0.3
-    cross = arc(V["src"], (V["kx"], 8.35, 1.6 * 0.66 + 0.75), apex=V["apex"])
-    # an attacker (Dixon in a bib) and a defender jump too, you jump highest
-    jump = math.sin(clamp((ph - 0.35) / 0.4) * math.pi)
-    for X, Z, n in V["mates"]:
-        sp = ours(n, view="back", pose="celebrate" if jump > 0.2 else "stand")
-        ground_shadow(img, c, X, Z, 0.35)
-        sprite_at(img, c, sp, X, Z, Y=0.35 * jump, height_m=1.55)
-    ground_shadow(img, c, KX, 8.4, 0.45)
-    hy = 0.75 * jump
-    caught = ph >= 0.55
-    fx, fy = c.p(KX, 8.4, hy)                   # feet on screen
-    sc = 1.6 * c.k(8.4) / 31.0
-    hands_y = fy - 37 * sc + 11.5 * sc           # glove row of the arms-up pose
-    r_ball = 0.16 * c.k(8.4)
-    sprite_at(img, c, hero(pose="celebrate" if (jump > 0.15 or caught) else "ready", gloves=True,
-                           mouth="open" if jump > 0.5 else "flat"), KX, 8.4, Y=hy, height_m=1.6)
-    if caught:   # ball IN FRONT of him, clasped by both gloves above his head
-        rb = max(r_ball, 3.6 * sc)
-        bx_, by_ = fx - 0.5 * sc, hands_y - 6.0 * sc          # held up above his head, clearly in front
-        draw_ball(img, bx_, by_ + rb, rb / 6.5)
-        r_ball = rb
-        dg = ImageDraw.Draw(img)
-        for sg in (-1, 1):
-            gx_ = bx_ + sg * (r_ball + 0.4 * sc)
-            gy_ = by_ + 0.8 * sc
-            dg.line([(gx_, gy_ + 2 * sc), (bx_ + sg * 5.5 * sc, hands_y + 4 * sc)], fill=OL, width=int(3.0 * sc))   # forearms up to the ball
-            dg.line([(gx_, gy_ + 2 * sc), (bx_ + sg * 5.5 * sc, hands_y + 4 * sc)], fill=SKIN["light"][0], width=int(1.8 * sc))
-            dg.rounded_rectangle([gx_ - 1.5 * sc, gy_ - 2.0 * sc, gx_ + 1.5 * sc, gy_ + 2.0 * sc], int(0.8 * sc), fill=(252, 140, 27), outline=OL, width=max(2, int(sc * 0.5)))
-    if not caught:
-        a = ph / 0.55
-        if a > 0.05:
-            pretty_arc(img, c, cross, 1.0, from_=a)
+    sd = -1 if k == 0 else 1                         # wing side: left first, then right
+    GZ, KX = 8.5, 0.15 * sd
+    wing = (4.3 * sd, 6.6)                           # winger on the flank
+    head = (0.9 * -sd, 6.4)                          # striker in the middle
+    other = (-1.6 * -sd, 7.4)                        # a defender marking (stays on the ground)
+    c = Cam(camX=1.3 * sd, camH=2.2, hor=560, f=560)
+    img = backdrop(560, stadium=False)
+    pitch_persp(img, c, Zgoal=GZ)
+    goal3d(img, c, GZ)
+    kick, hit, catch = 0.12, 0.46, 0.66
+    hand_y = 1.6 + 0.55
+    cross = arc((wing[0] - 0.3 * sd, wing[1] + 0.2, 0.1), (head[0], head[1], 1.95), apex=2.6)
+    header = arc((head[0], head[1], 1.95), (KX, GZ - 0.1, hand_y + 0.55), apex=0.25)
+    # winger
+    ground_shadow(img, c, *wing, 0.35)
+    sprite_at(img, c, ours(7 if k == 0 else 11, pose="kick" if ph < kick + 0.05 else "stand", phase=clamp(ph / kick)), *wing, height_m=1.55)
+    # defender, stays down
+    ground_shadow(img, c, *other, 0.35)
+    sprite_at(img, c, ours(4, view="back", pose="stand"), *other, height_m=1.55)
+    # striker: jumps for the header
+    hj = 0.45 * math.sin(clamp((ph - (hit - 0.12)) / 0.24) * math.pi)
+    ground_shadow(img, c, *head, 0.35)
+    sprite_at(img, c, ours(9 if k == 0 else 10, view="back", pose="celebrate" if hj > 0.05 else "stand"), *head, Y=hj, height_m=1.55)
+    # keeper: set, then jumps to meet the header and catches it above his head
+    kj = 0.55 * math.sin(clamp((ph - (catch - 0.16)) / 0.34) * math.pi)
+    caught = ph >= catch
+    ground_shadow(img, c, KX, GZ - 0.1, 0.45)
+    sprite_at(img, c, hero(pose="celebrate" if (kj > 0.05 or caught) else "ready", gloves=True, mouth="open" if kj > 0.3 else "flat"),
+              KX, GZ - 0.1, Y=kj, height_m=1.6)
+    if ph < kick:
+        ball_at(img, c, wing[0] - 0.3 * sd, wing[1] + 0.2, 0.11)
+    elif ph < hit:
+        a = (ph - kick) / (hit - kick)
+        pretty_arc(img, c, cross, 1.0, from_=a)
         ball_trail(img, c, cross, a, 0.08)
         ball_at(img, c, *at(cross, a))
-    elif ph < 0.68:
-        glow_ring(img, fx - 1 * sc, hands_y, 50, 0.8, (255, 255, 210))
-    return cam(img, 1.05 + 0.03 * u, 380, 700)
+    elif ph < catch:
+        a = (ph - hit) / (catch - hit)
+        if a < 0.15:
+            impact_lines(img, *c.p(head[0], head[1], 1.95), 0, a * 0.6, 8)
+        ball_trail(img, c, header, a, 0.15)
+        ball_at(img, c, *at(header, a))
+    else:   # held in front of him, above his head, both gloves on it
+        sc = 1.6 * c.k(GZ - 0.1) / 31
+        fx, fy = c.p(KX, GZ - 0.1, kj)
+        rb = 3.6 * sc
+        bx_, by_ = fx - 0.5 * sc, fy - 37 * sc + 11.5 * sc - 6.0 * sc
+        draw_ball(img, bx_, by_ + rb, rb / 6.5)
+        dg = ImageDraw.Draw(img)
+        for sg in (-1, 1):
+            gx_ = bx_ + sg * (rb + 0.4 * sc); gy_ = by_ + 0.8 * sc
+            dg.rounded_rectangle([gx_ - 1.5 * sc, gy_ - 2.0 * sc, gx_ + 1.5 * sc, gy_ + 2.0 * sc], int(0.8 * sc), fill=(252, 140, 27), outline=OL, width=max(2, int(sc * 0.5)))
+        if ph < catch + 0.12:
+            glow_ring(img, bx_, by_ + rb, 46, 0.8, (255, 255, 210))
+    # camera: wide for the cross, pushes in on you for the header and the catch
+    z = 1.2 + 0.6 * ease_in_out(clamp((ph - hit + 0.05) / 0.25))
+    tx, ty = c.p(KX, GZ, 1.2)
+    return cam(img, z, lerp(360, tx, ease_in_out(clamp((ph - hit) / 0.2))), lerp(760, ty, ease_in_out(clamp((ph - hit) / 0.2))))
 
 
 def s_dixon_watch(t, u, T):
@@ -1340,10 +1355,10 @@ def s_finger_v2(t, u, T):
         impact_lines(img, bx_, by_, 0.0, k * 0.25, 10)
         ImageDraw.Draw(img).line([c.p(-2.5, GZ, 2.0), c.p(2.5, GZ, 2.0)], fill=(255, 255, 210), width=6)   # bar rings
     # --- our wall in the foreground, jumping (front view: they face the taker = the camera)
-    jump = 0.4 * math.sin(clamp((u + 0.6) / 0.9) * math.pi)
+    jump = 0.0
     for i, X in enumerate((-0.6, -0.05, 0.5, 1.05)):
         ground_shadow(img, c, X, 11.55, 0.32)
-        sprite_at(img, c, ours((4, 5, 9, 6)[i], pose="celebrate" if jump > 0.1 else "stand"), X, 11.55, Y=jump, height_m=1.55)
+        sprite_at(img, c, ours((4, 5, 9, 6)[i], pose="stand"), X, 11.55, height_m=1.55)
     slowmo_bars(img, 1.0 if u < bar else 1 - clamp((u - bar) * 4))
     img = flash(img, 0.55 * clamp(1 - abs(u - contact) * 18))
     zoom = 1.0 + 0.2 * ease_in_out(clamp(u / contact))
