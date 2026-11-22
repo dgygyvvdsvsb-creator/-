@@ -1175,9 +1175,9 @@ def s_1v1_v2(t, u, T):
                          phase=clamp((u - shot_t + 0.05) / 0.1) if u > shot_t - 0.05 else t * 2.6), rx, rz, height_m=1.55)
     if u < shot_t:
         ring_on_grass(img, c, rx, rz, 0.6, C_Y, 4)
-        run_path = arc((rx, rz + 0.6, 0.0), (0.6, 12.8, 0.0), apex=0.0)
+        run_path = arc((rx + 0.45, rz + 0.22, 0.0), (0.6, 12.8, 0.0), apex=0.0)
         dotted_path(img, c, run_path, 1.0, from_=0.0)
-        ball_at(img, c, rx - 0.2, rz + 0.6, 0.11)
+        ball_at(img, c, rx + 0.45, rz + 0.22, 0.11)        # at his right boot, in front
     else:
         shot = arc((0.55, 12.6, 0.1), (-0.25, kz - 0.05, 0.45), apex=0.1)
         defl = arc((-0.25, kz - 0.05, 0.45), (5.8, 18.5, 0.6), apex=1.7)
@@ -1245,9 +1245,9 @@ def s_foul(t, u, T):
     if not tripped:
         sprite_at(img, c, opp(10, view="back", pose="run", phase=t * 2.8), cx, cz, height_m=1.55)
         if u > lose:
-            ball_at(img, c, cx + 0.2, cz + 0.6, 0.11)
+            ball_at(img, c, cx + 0.45, cz + 0.22, 0.11)
         else:
-            ball_at(img, c, -0.7, mz + 0.5, 0.11)
+            ball_at(img, c, -0.55, mz + 0.22, 0.11)
     else:
         f = clamp((u - foul) / 0.25)
         k = 1.55 * c.k(cz) / 31
@@ -1276,6 +1276,72 @@ def s_foul(t, u, T):
     return out
 
 
+def s_finger_v2(t, u, T):
+    """FINGERTIPS. CROSSBAR. OUT! — telephoto from behind the taker: the wall jumps, the ball curls over it into the
+    top corner (shooter's right), you fly across, fingertips push it onto the bar and over."""
+    c = Cam(camX=1.2, camH=3.2, hor=470, f=1750)
+    img = backdrop(470, stadium=True)
+    GZ = 19.0
+    pitch_persp(img, c, Zgoal=GZ, box=False)
+    goal3d(img, c, GZ)
+    contact, bar = 0.42, 0.55
+    # --- ball: curling path into the top right corner (slow motion until the touch)
+    path = arc((3.2, 2.4, 0.1), (2.25, GZ, 1.85), apex=2.2, curve=-0.6)
+    over = arc((2.25, GZ, 1.85), (2.35, GZ, 2.02), apex=0.0)            # tipped up onto the bar
+    out_ = arc((2.35, GZ, 2.02), (2.9, GZ + 2.5, 0.2), apex=1.6)        # over the bar, out
+    # --- keeper flight (his left = screen right), launches before the frame starts so we see him in the air
+    f = clamp((u + 0.25) / (contact + 0.25))
+    kxw = lerp(0.2, 1.55, ease_out(f))
+    kyw = lerp(0.6, 1.35, math.sin(f * math.pi / 2)) if u <= contact else 1.35 - 1.3 * ((u - contact) / (1 - contact)) ** 2
+    if u > contact:
+        kxw = 1.55 + 0.35 * (u - contact)
+    sc = 1.6 * c.k(GZ) / 31.0
+    rot = -70 if u <= contact + 0.1 else -70 - 25 * clamp((u - contact - 0.1) / 0.3)
+    sp = hero(pose="reach", gloves=True, mouth="open").resize((int(24 * sc), int(39 * sc)), Image.NEAREST)
+    sp = sp.rotate(rot, expand=True, resample=Image.NEAREST)
+    kx, ky = c.p(kxw, GZ, kyw)
+    ground_shadow(img, c, kxw, GZ, 0.8, 80)
+    img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height / 2)))
+    ang = math.radians(-rot)
+    gx = kx + 16.5 * sc * math.sin(ang)        # fingertips (end of the stretched arms)
+    gy = ky - 16.5 * sc * math.cos(ang)
+    # --- the ball
+    if u < contact:
+        a = 0.45 + 0.55 * (u / contact) ** 1.3
+        pretty_arc(img, c, path, 1.0, from_=a)
+        ball_trail(img, c, path, a, 0.05)
+        ball_at(img, c, *at(path, a), shadow_=False)
+    elif u < bar:
+        a = (u - contact) / (bar - contact)
+        ball_at(img, c, *at(over, a), shadow_=False)
+    else:
+        a = clamp((u - bar) / (1 - bar))
+        ball_trail(img, c, out_, a, 0.12)
+        ball_at(img, c, *at(out_, a), shadow_=False)
+    # --- impacts: fingertip touch, then the crossbar
+    tx, ty = c.p(2.25, GZ, 1.85)
+    if contact - 0.02 < u < contact + 0.25:
+        k = (u - contact) / 0.25
+        glow_ring(img, tx, ty, 30 + 120 * k, 0.95 * (1 - k), (255, 245, 190))
+        impact_lines(img, tx, ty, 0.0, k * 0.25, 12)
+    bx_, by_ = c.p(2.35, GZ, 2.0)
+    if bar < u < bar + 0.25:
+        k = (u - bar) / 0.25
+        impact_lines(img, bx_, by_, 0.0, k * 0.25, 10)
+        ImageDraw.Draw(img).line([c.p(-2.5, GZ, 2.0), c.p(2.5, GZ, 2.0)], fill=(255, 255, 210), width=6)   # bar rings
+    # --- our wall in the foreground, jumping (front view: they face the taker = the camera)
+    jump = 0.4 * math.sin(clamp((u + 0.6) / 0.9) * math.pi)
+    for i, X in enumerate((-0.6, -0.05, 0.5, 1.05)):
+        ground_shadow(img, c, X, 11.55, 0.32)
+        sprite_at(img, c, ours((4, 5, 9, 6)[i], pose="celebrate" if jump > 0.1 else "stand"), X, 11.55, Y=jump, height_m=1.55)
+    slowmo_bars(img, 1.0 if u < bar else 1 - clamp((u - bar) * 4))
+    img = flash(img, 0.55 * clamp(1 - abs(u - contact) * 18))
+    zoom = 1.0 + 0.2 * ease_in_out(clamp(u / contact))
+    out = cam(img, zoom, lerp(360, tx, 0.5), lerp(760, ty, 0.5), *shake(t, T + bar * (STARTS[22] - T), .35, 14)).convert("RGBA")
+    mini_score(out, t, "90'")
+    return out
+
+
 from PIL import ImageEnhance
 
 
@@ -1288,7 +1354,7 @@ def grade(img):
 
 
 SCENES = [s_hook, s_knock, s_coach, s_training, s_crosses, s_dixon_watch, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
-          s_header, s_1v1_v2, s_mason_goal, s_fk_tease, s_foul, s_fk, s_slowmo, s_finger, s_whistle, s_pen, s_choice, s_end]
+          s_header, s_1v1_v2, s_mason_goal, s_fk_tease, s_foul, s_fk, s_slowmo, s_finger_v2, s_whistle, s_pen, s_choice, s_end]
 
 
 def line_at(t):
