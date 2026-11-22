@@ -68,9 +68,10 @@ def word_times(i):
 
 def chunks(ws):
     out, cur = [], []
-    for w in ws:
+    for j, w in enumerate(ws):
         cur.append(w)
-        if w[0][-1] in ".,?!\":" or w[0].endswith("...") or len(cur) == 3:
+        nxt_ends = j + 1 < len(ws) and ws[j + 1][0][-1] in ".?!" and len(cur) == 3 and not w[0][-1] in ".,?!\":"
+        if w[0][-1] in ".,?!\":" or w[0].endswith("...") or (len(cur) == 3 and not nxt_ends) or len(cur) == 4:
             out.append(cur)
             cur = []
     if cur:
@@ -126,8 +127,19 @@ def score84(t):
     return k, n, m
 
 
+def match_clock(t):
+    keys = [(STARTS[9], 12 * 60), (STARTS[11], 31 * 60), (STARTS[12], 64 * 60), (STARTS[13], 88 * 60 + 40), (STARTS[22], 89 * 60 + 58)]
+    if t <= keys[0][0]:
+        return keys[0][1]
+    for (a, va), (b, vb) in zip(keys, keys[1:]):
+        if a <= t <= b:
+            return int(lerp(va, vb, (t - a) / (b - a)))
+    return keys[-1][1]
+
+
 def bug84(img, t):
-    k, n, m = score84(t)
+    k, n, _ = score84(t)
+    m = match_clock(t) // 60 + 1
     d = ImageDraw.Draw(img)
     x, y = 40, 248
     d.rectangle([x, y, x + 330, y + 46], fill=(10, 10, 16), outline=(230, 230, 230), width=3)
@@ -265,7 +277,7 @@ def present_pitch(t, Zg=8.5):
 def s_showme(t, u, T):
     img, c = present_pitch(t)
     side = -1
-    phase = clamp((u - 0.25) / 0.75)
+    phase = min(0.66, clamp((u - 0.25) / 0.75))
     gx, gy = keeper_world(img, c, 0, 8.5, side, phase)
     shot = arc((-0.05, 2.4, 0.0), (side * 1.5, 8.5, 0.95), apex=0.45)
     if phase < 0.33:
@@ -434,41 +446,41 @@ def s_nine(t, u, T):
     return cam(img, 1.0 + 0.05 * u, 360, 820)
 
 
-VOLLEY = arc((0.6, 4.0, 0.9), (-1.6, 14.0, 1.25), apex=0.6)
+VOLLEY = arc((1.45, 7.4, 0.3), (-1.6, 14.0, 1.25), apex=0.7)
 
 
 def s_volley(t, u, T):
-    img, c = set84(470, 14.0, camH=2.0)
-    kick = 0.25
-    phase = clamp((u - kick) / 0.9)
-    gx, gy = keeper84(img, c, 0, 14.0, -1, 0.1 + phase * 0.9 if u > kick else 0.05)
-    for X, Z, n, team in ((-2.6, 10.5, 5, "K"), (2.4, 11, 4, "K"), (3.6, 8, 10, "N")):
+    img, c = set84(640, 14.0, camH=2.0)
+    kick = 0.3
+    kp = min(0.7, 0.1 + clamp((u - kick) / 0.9) * 0.9) if u > kick else 0.05
+    gx, gy = keeper84(img, c, 0, 14.0, -1, kp)
+    for X, Z, n, team in ((-2.6, 10.5, 5, "K"), (2.4, 11, 4, "K"), (3.6, 8, 7, "N")):
         ground_shadow(img, c, X, Z, 0.35)
         sprite_at(img, c, kingston(n) if team == "K" else newcastle(n, view="back", pose="run", phase=t * 2), X, Z, height_m=1.7)
     if u < kick:      # the cross drops onto his volley
         a = u / kick
-        ball_at(img, c, lerp(4.0, 0.6, a), lerp(6.0, 4.0, a), 2.6 - 1.7 * a)
-    else:
-        a = clamp((u - kick) / 0.28)
-        if 0.1 + phase * 0.9 < 0.38 and a < 1:
-            ball_trail(img, c, VOLLEY, a, 0.15)
-            ball_at(img, c, *at(VOLLEY, a))
-        else:
-            draw_ball(img, gx, gy + 12, 0.16 * c.k(14) / 6.5)
-            if phase < 0.45:
-                glow_ring(img, gx, gy, 60, 0.8, (255, 255, 200))
-    paste(img, young_coach(view="back", pose="kick" if u > kick - 0.08 else "run", phase=clamp((u - kick + 0.08) / 0.15) if u > kick - 0.08 else t * 2.4), 11, 300, 1330)
+        ball_at(img, c, lerp(6.0, 1.45, a), lerp(10.0, 7.4, a), 2.8 * (1 - a) + 0.3 * a)
+    elif kp < 0.38:
+        a = clamp((u - kick) / 0.26)
+        ball_trail(img, c, VOLLEY, a, 0.15)
+        ball_at(img, c, *at(VOLLEY, a))
+    else:             # parried: it spills off his gloves and drops loose in the six-yard box
+        b = clamp((kp - 0.38) / 0.3)
+        ball_at(img, c, lerp(-1.6, -1.4, b), lerp(14.0, 13.6, b), 1.25 * (1 - b) + 0.35 * abs(math.sin(b * math.pi)) * (1 - b))
+        if b < 0.3:
+            glow_ring(img, gx, gy, 60, 0.8 * (1 - b / 0.3), (255, 255, 200))
+    ground_shadow(img, c, 1.6, 6.9, 0.4)
+    sprite_at(img, c, young_coach(view="back", pose="kick" if u > kick - 0.08 else "run",
+                                   phase=clamp((u - kick + 0.08) / 0.15) if u > kick - 0.08 else t * 2.4), 1.6, 6.9, height_m=1.8)
     rain84(img, t, 100)
-    return cam(img, 1.25 + 0.06 * u, 360, 660)
+    return cam(img, 1.2 + 0.06 * u, 360, 860)
 
 
 def s_rebound(t, u, T):
-    """he parries, #10 hits the rebound, Grandad springs across and blocks it"""
-    img, c = set84(470, 14.0, camH=2.0)
-    rb = arc((-1.4, 13.6, 0.4), (0.9, 10.4, 0.0), apex=1.2)
-    shot = arc((0.9, 10.4, 0.1), (1.4, 14.0, 0.5), apex=0.2)
-    ground_shadow(img, c, 0.9, 10.4, 0.35)
-    sprite_at(img, c, newcastle(10, pose="kick" if 0.3 < u < 0.45 else "run", phase=clamp((u - 0.3) / 0.12) if u > 0.3 else t * 2), 0.9, 10.4, height_m=1.7)
+    """he parried it; #8 hits the rebound, Grandad springs across and blocks it"""
+    img, c = set84(640, 14.0, camH=2.0)
+    rb = arc((-1.4, 13.6, 0.4), (2.4, 9.8, 0.0), apex=1.4)
+    shot = arc((2.4, 9.8, 0.1), (1.4, 14.0, 0.5), apex=0.2)
     if u < 0.3:          # Grandad still on the ground after the first save
         s = 1.75 * c.k(14) / 31
         sp = young_grandad(pose="reach").resize((int(24 * s), int(39 * s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
@@ -478,7 +490,7 @@ def s_rebound(t, u, T):
         ball_at(img, c, *at(rb, a))
     else:
         ph = clamp((u - 0.3) / 0.7)
-        gx, gy = keeper84(img, c, -0.4, 14.0, 1, 0.1 + ph * 0.6)
+        gx, gy = keeper84(img, c, -0.4, 14.0, 1, min(0.7, 0.1 + ph * 0.9))
         a = clamp((u - 0.38) / 0.12)
         if a < 1:
             ball_trail(img, c, shot, a, 0.15)
@@ -488,8 +500,10 @@ def s_rebound(t, u, T):
             ball_at(img, c, lerp(1.4, 4.5, b), lerp(13.6, 11.0, b), 1.8 * math.sin(b * math.pi) + 0.1)
             if b < 0.3:
                 glow_ring(img, gx, gy, 70, 0.8 * (1 - b / 0.3), (255, 255, 200))
+    ground_shadow(img, c, 2.7, 9.6, 0.35)          # the striker is nearer the camera: drawn last
+    sprite_at(img, c, newcastle(8, pose="kick" if 0.3 < u < 0.45 else "run", phase=clamp((u - 0.3) / 0.12) if u > 0.3 else t * 2), 2.7, 9.6, height_m=1.7)
     rain84(img, t, 100)
-    return cam(img, 1.25 + 0.06 * u, 360, 660, *shake(t, T + 0.5 * D(10), .3, 10))
+    return cam(img, 1.2 + 0.06 * u, 360, 860, *shake(t, T + 0.5 * D(10), .3, 10))
 
 
 def s_score(t, u, T):
@@ -500,16 +514,19 @@ def s_score(t, u, T):
     goal3d(img, c, 70.0, w=7.3, h=2.4)
     goalt = 0.4
     for i, (X, Z) in enumerate(((-3, 58), (1, 62), (4, 60))):
-        sprite_at(img, c, kingston(8 + i, pose="run", phase=t * 2), X + math.sin(t + i), Z, height_m=1.8)
-    sprite_at(img, c, newcastle(1, pose="ready"), 0.5, 69.5, height_m=1.8)
+        sprite_at(img, c, kingston(6 + i, pose="run", phase=t * 2), X + math.sin(t + i), Z, height_m=1.8)
+    sprite_at(img, c, person(Kit((90, 90, 100), (30, 30, 36), (90, 90, 100)), hair="black", gloves=True, pose="ready"), 0.5, 69.5, height_m=1.8)
     a = clamp(u / goalt)
     ball_at(img, c, lerp(1.0, 2.6, a), lerp(62, 70.5, a), 0.6 * math.sin(a * math.pi) + 0.2)
     jump = abs(math.sin(clamp((u - goalt) / 0.6) * math.pi * 2)) * 50 if u > goalt else 0
     paste(img, young_grandad(view="back", pose="celebrate" if u > goalt else "ready"), 14, 340, 1420 - jump)
+    gx_, gy_ = c.p(2.6, 70.5, 0.4)
     if u > goalt:
+        glow_ring(img, gx_, gy_, 20 + 60 * clamp((u - goalt) * 4), 0.9 * (1 - clamp((u - goalt) * 4)), (255, 230, 150))
         img = flash(img, 0.25 * clamp(1 - (u - goalt) * 6), (255, 220, 120))
     rain84(img, t, 100)
-    return cam(img, 1.0 + 0.04 * u, 360, 720)
+    z = ease_in_out(clamp((u - goalt) / 0.3))
+    return cam(img, lerp(3.2, 1.0, z), lerp(gx_, 360, z), lerp(gy_ + 60, 720, z))
 
 
 def s_angry(t, u, T):
@@ -537,28 +554,29 @@ def s_corner(t, u, T):
         for k in range(8):
             d.ellipse([120 + k * 66, 440 + (360 if k % 2 else 0) * 0, 132 + k * 66, 452], fill=(255, 230, 150) if on else (80, 70, 50))
         return cam(img, 1.0 + 0.06 * u, 360, 640)
-    img, c = set84(470, 13.0, camX=3.0, camH=2.2)
-    d = ImageDraw.Draw(img)
+    c = Cam(camX=3.0, camH=2.2, hor=640, f=520)
+    img = old_stadium(640)
+    mud_pitch(img, c, 13.0)
+    goal3d(img, c, 13.0)
     rng = random.Random(8)
     ppl = []
-    for i in range(12):
-        X = rng.uniform(-3.5, 3.5); Z = rng.uniform(8.5, 11.5)
-        ppl.append((Z, X, i % 2))
-    ppl.append((13.0, 0.0, 2))
+    for i in range(14):
+        ppl.append((rng.uniform(9.0, 12.2), rng.uniform(-3.0, 3.0), i % 2))
+    ppl.append((13.0, 0.3, 2))
     for Z, X, tm in sorted(ppl, key=lambda q: -q[0]):
         ground_shadow(img, c, X, Z, 0.3)
-        sp = young_grandad(pose="ready") if tm == 2 else (kingston(4 + int(X * 7) % 6) if tm else newcastle([4, 5, 7, 10, 11][int(Z * 3) % 5], view="back"))
-        jig = math.sin(t * 6 + X) * 0.03
-        sprite_at(img, c, sp, X + jig, Z, height_m=1.75)
-    sprite_at(img, c, young_coach(view="back"), 0.6, 9.6, height_m=1.8)
-    x, y = c.p(13.5, 13.0)
+        sp = young_grandad(pose="ready") if tm == 2 else (kingston(3 + int(X * 7) % 6) if tm else newcastle([4, 5, 7, 8, 6][int(Z * 3) % 5], view="back"))
+        sprite_at(img, c, sp, X + math.sin(t * 6 + X) * 0.03, Z, height_m=1.75)
+    sprite_at(img, c, young_coach(view="back"), 0.6, 10.6, height_m=1.8)
     d = ImageDraw.Draw(img)
-    d.line([(x, y), (x, y - 70)], fill=(250, 250, 250), width=4)
-    d.polygon([(x, y - 70), (x + 26, y - 62 + math.sin(t * 8) * 4), (x, y - 50)], fill=(240, 200, 40))
-    sprite_at(img, c, newcastle(7, view="back"), 12.8, 13.3, height_m=1.75)
-    ball_at(img, c, 13.2, 12.9, 0.0)
+    x, y = c.p(9.6, 13.0)
+    d.line([(x, y), (x, y - 50)], fill=(250, 250, 250), width=3)
+    d.polygon([(x, y - 50), (x + 18, y - 45 + math.sin(t * 8) * 3), (x, y - 38)], fill=(240, 200, 40))
+    ground_shadow(img, c, 9.2, 12.3, 0.3)
+    sprite_at(img, c, newcastle(7, view="back"), 9.2, 12.3, height_m=1.75)
+    ball_at(img, c, 9.1, 12.8, 0.0)
     rain84(img, t, 110)
-    return cam(img, 1.0 + 0.04 * u, 420, 700)
+    return cam(img, 1.05 + 0.04 * u, 360, 760)
 
 
 def s_hang(t, u, T):
@@ -657,7 +675,7 @@ def s_mud(t, u, T):
         glow_ring(img, 120, 600, 80 + 10 * math.sin(t * 6), 0.7, (255, 190, 90))   # the gloves
     rain(img, t, 90, 120)
     vignette(img, 0.55)
-    return cam(img, 1.0 + 0.08 * u, 360, 700)
+    return cam(img, 1.0 + 0.2 * ease_in_out(u), 360, 700)
 
 
 def s_rollin(t, u, T):
@@ -671,7 +689,7 @@ def s_rollin(t, u, T):
     ball_at(img, c, X, Z, 0.0)
     for i, (Xp, Zp) in enumerate(((2.8, 6.0), (-3.4, 6.8))):
         ground_shadow(img, c, Xp, Zp, 0.35)
-        sprite_at(img, c, newcastle(7 if i else 11, pose="celebrate" if u > 0.6 else "stand"), Xp, Zp, height_m=1.75)
+        sprite_at(img, c, newcastle(7 if i else 4, pose="celebrate" if u > 0.6 else "stand"), Xp, Zp, height_m=1.75)
     if u > 0.6:
         impact_lines(img, *c.p(0.6, 9.6, 0.3), T + 0.6 * D(19), t, 10)
     rain84(img, t, 110)
@@ -680,62 +698,85 @@ def s_rollin(t, u, T):
 
 
 def s_stretcher(t, u, T):
-    img = old_stadium(700).copy()
-    pitch_persp(img, Cam(camH=1.4, hor=700), None, warm=False)
-    x0 = lerp(-260, 40, u)
-    step = abs(math.sin(t * 4)) * 8
-    S_ = 12
-    by = 1200
-    sy = by - 17 * S_ - step
-    sx0, sx1 = x0 + 70, x0 + 590
+    img = old_stadium(640).copy()
+    pitch_persp(img, Cam(camH=1.4, hor=640), None, warm=False)
+    x0 = lerp(70, 130, u)
+    step = abs(math.sin(t * 4)) * 6
+    S_ = 10
+    by = 990
+    sy = by - 17 * S_ - step                  # hand height of the medics ("phone" pose: hands at the chest)
+    sx0, sx1 = x0 + 70, x0 + 490
     paste(img, medic(pose="phone", look=1), S_, x0, by - step)
+    paste(img, medic(pose="phone", skin="tan", hair="black", look=-1), S_, x0 + 560, by - step)
     d = ImageDraw.Draw(img)
-    d.rectangle([sx0 - 60, sy - 8, sx1 + 60, sy + 8], fill=(150, 150, 160), outline=OL, width=3)    # poles
-    d.rectangle([sx0, sy - 34, sx1, sy], fill=(230, 226, 210), outline=OL, width=4)                 # canvas
-    sp = big(young_grandad(pose="stand", blink=True, mouth="flat"), 11).rotate(90, expand=True, resample=Image.NEAREST)
-    img.alpha_composite(sp, (int(sx0 + 30), int(sy - sp.height + 70)))
+    d.rectangle([sx0, sy - 30, sx1, sy], fill=(230, 226, 210), outline=OL, width=4)                 # canvas
+    sp = big(young_grandad(pose="stand", blink=True, mouth="flat"), 10).rotate(90, expand=True, resample=Image.NEAREST)
+    img.alpha_composite(sp, (int(sx0 + 10), int(sy - sp.height + 64)))
     d = ImageDraw.Draw(img)
-    hx = sx0 + 300                                                    # his gloved hand hangs over the side
-    d.rectangle([hx, sy, hx + 22, sy + 80], fill=KEEPER_G, outline=OL, width=3)
-    d.line([(hx - 2, sy + 76), (hx + 24, sy + 76)], fill=(225, 30, 40), width=5)
-    d.rounded_rectangle([hx - 8, sy + 80, hx + 30, sy + 122], 8, fill=(252, 140, 27), outline=OL, width=3)
-    paste(img, medic(pose="phone", skin="tan", hair="black", look=1), S_, x0 + 660, by - step)
+    d.rectangle([x0 - 10, sy - 6, x0 + 570, sy + 6], fill=(150, 150, 160), outline=OL, width=3)     # poles, end to end
+    for hx_ in (x0, x0 + 560):                                                                     # fists on the handles
+        d.rounded_rectangle([hx_ - 22, sy - 14, hx_ + 22, sy + 14], 6, fill=SKIN["light"][0], outline=OL, width=3)
+    hx = sx0 + 250                                                    # his gloved hand hangs over the side
+    d.rectangle([hx, sy, hx + 22, sy + 70], fill=KEEPER_G, outline=OL, width=3)
+    d.rectangle([hx - 2, sy + 62, hx + 24, sy + 70], fill=(225, 30, 40))
+    d.rounded_rectangle([hx - 12, sy + 70, hx + 34, sy + 124], 10, fill=(252, 140, 27), outline=OL, width=4)
+    for f_ in range(3):
+        d.line([(hx - 2 + f_ * 12, sy + 100), (hx - 2 + f_ * 12, sy + 122)], fill=(206, 98, 14), width=3)
     rain84(img, t, 120)
     img = ImageEnhance.Color(img.convert("RGB")).enhance(0.55).convert("RGBA")
-    return cam(img, 1.0 + 0.04 * u, 360, 860)
+    return cam(img, 1.0 + 0.05 * u, 360, 800)
 
 
 def s_face(t, u, T):
     img = old_stadium(560).filter(ImageFilter.GaussianBlur(6))
     d = ImageDraw.Draw(img)
     d.rectangle([0, 560, FW, FH], fill=(60, 90, 56))
-    paste(img, young_coach(mouth="flat", look=0), 26, 360, 1460 + 20 * u)
+    paste(img, young_coach(mouth="flat", look=-1 if u < 0.5 else 0, blink=0.7 < u < 0.73), 26, 360, 1460 + 20 * u)
     # floodlight from above: his eyes in shadow
     top = 1460 + 20 * u - 39 * 26
-    tint(img, [0, top + 11 * 26, FW, top + 15 * 26], (0, 0, 0, 175))
+    tint(img, [360 - 5 * 26, top + 12 * 26, 360 + 5 * 26, top + 15 * 26], (0, 0, 0, 160))
     rain84(img, t, 120)
     vignette(img, 0.6)
-    return cam(img, 1.0 + 0.08 * u, 360, 820)
+    return cam(img, 1.0 + 0.18 * ease_in_out(u), 360, 800)
 
 
 def s_today(t, u, T):
-    img, c = present_pitch(t)
-    sprite_at(img, c, hero(pose="stand", gloves=True, look=1), 0, 8.5, height_m=1.6)
-    img = img.filter(ImageFilter.GaussianBlur(2))
-    paste(img, coach(mouth="open", look=-1), 22, 420, 1640)
+    if u < 0.55:
+        img, c = present_pitch(t)
+        sprite_at(img, c, hero(pose="stand", gloves=True, look=1), 0, 8.5, height_m=1.6)
+        img = img.filter(ImageFilter.GaussianBlur(2))
+        CB = 1500
+        paste(img, coach(mouth="open", look=-1), 22, 420, CB)
+        top = CB - 39 * 22
+        collar = (420 - 12 * 22 + (3 + 9) * 22, top + 18 * 22)              # neck of his shirt
+        f = clamp((u - 0.25) / 0.3)
+        hx, hy = 420 - 12 * 22 + (3 + 16) * 22, top + 25 * 22              # his hand by his side
+        wx, wy = hx - 20, hy + 900 * f * f
+        d = ImageDraw.Draw(img)
+        d.line([collar, (wx + 30, wy - 10)], fill=(40, 40, 50), width=4)
+        d.rounded_rectangle([wx, wy - 26, wx + 64, wy + 8], 12, fill=(200, 204, 214), outline=OL, width=4)
+        d.rectangle([wx + 50, wy - 30, wx + 70, wy - 18], fill=(170, 174, 186), outline=OL, width=3)
+        if u < 0.2:
+            img = vhs(img, t, 1.5 * (1 - u / 0.2))
+        return cam(img, 1.0 + 0.04 * u, 360, 820)
+    # insert: the whistle hits the grass and bounces once, the cord trailing up out of frame
+    v = (u - 0.55) / 0.45
+    img = Image.new("RGBA", (FW, FH), (70, 140, 74, 255))
     d = ImageDraw.Draw(img)
-    # the whistle drops out of his hand on its cord and hits the grass
-    f = clamp((u - 0.35) / 0.35)
-    wx = 250
-    wy = 1060 + 220 * f * f
-    if f >= 1:
-        wy = 1280 - 20 * abs(math.sin((u - 0.7) * 12)) * math.exp(-(u - 0.7) * 8)
-    d.line([(300, 960), (wx + 30, wy - 10)], fill=(40, 40, 50), width=4)
-    d.rounded_rectangle([wx, wy - 26, wx + 64, wy + 8], 12, fill=(200, 204, 214), outline=OL, width=4)
-    d.rectangle([wx + 50, wy - 30, wx + 70, wy - 18], fill=(170, 174, 186), outline=OL, width=3)
-    if u < 0.2:   # tape glitch back to today
-        img = vhs(img, t, 1.5 * (1 - u / 0.2))
-    return cam(img, 1.0 + 0.04 * u, 360, 860)
+    rng = random.Random(6)
+    for _ in range(500):
+        x, y = rng.uniform(0, FW), rng.uniform(0, FH)
+        d.line([(x, y), (x + rng.uniform(-4, 4), y - rng.uniform(8, 20))], fill=(60, 126, 64) if rng.random() < 0.5 else (90, 160, 86), width=3)
+    yb = 880 - 260 * max(0.0, 1 - v * 5) ** 2 if v < 0.2 else 880 - 60 * abs(math.sin((v - 0.2) * 10)) * math.exp(-(v - 0.2) * 9)
+    d.line([(420, -10), (380, yb - 20)], fill=(40, 40, 50), width=8)
+    d.rounded_rectangle([260, yb - 70, 420, yb + 10], 30, fill=(200, 204, 214), outline=OL, width=8)
+    d.rectangle([390, yb - 80, 450, yb - 46], fill=(170, 174, 186), outline=OL, width=6)
+    d.ellipse([290, yb - 56, 320, yb - 26], fill=(150, 154, 166))
+    if 0.18 < v < 0.35:
+        impact_lines(img, 340, yb + 10, T + 0.55 * D(22) + 0.2 * 0.45 * D(22), t, 10)
+    shadow(img, 340, 900, 200, 30, 80)
+    vignette(img, 0.4)
+    return cam(img, 1.0 + 0.05 * v, 360, 760)
 
 
 def choice_bg():
@@ -793,7 +834,7 @@ def s_choice(t, u, T):
 def s_end(t, u, T):
     img = choice_bg()
     choice_cards(img, t, T - 10)
-    img = Image.blend(img.convert("RGB"), Image.new("RGB", img.size, (10, 12, 30)), 0.5 * clamp((t - T) / 0.3)).convert("RGBA")
+    img = Image.blend(img.convert("RGB"), Image.new("RGB", img.size, (10, 12, 30)), 0.88 * clamp((t - T) / 0.3)).convert("RGBA")
     d = ImageDraw.Draw(img)
     k = spring(t - T, 16, 7)
     py = lerp(1400, 420, clamp(k, 0, 1.2))
@@ -812,7 +853,7 @@ def s_end(t, u, T):
     if after and t < tap + 0.5:
         glow_ring(img, bx, by, 60 + 300 * (t - tap), 0.8 * (1 - (t - tap) / 0.5), C_Y)
     if t < tap + 0.4:
-        gx = lerp(760, bx + 100, ease_in_out((t - T) / 0.8)); gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
+        gx = lerp(640, bx + 100, ease_in_out((t - T) / 0.8)); gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
         d.rounded_rectangle([gx - 40, gy, gx + 40, gy + 90], 18, fill=(252, 140, 27), outline=OL, width=5)
         d.rounded_rectangle([gx - 12, gy - 40, gx + 12, gy + 20], 10, fill=(252, 140, 27), outline=OL, width=5)
         d.rectangle([gx - 40, gy + 90, gx + 40, gy + 104], fill=(225, 30, 40), outline=OL, width=3)
@@ -853,7 +894,9 @@ def frame(t):
     if i in PAST and SCENES[i] is not s_card:
         img = vhs(img, t, 1.0)
         k, n, m = score84(t)
-        vhs_osd(img, t, f"MAY 14 1984  {m}:{int(t * 7) % 60:02d}" if i >= 9 else "MAY 14 1984")
+        mc = match_clock(t)
+        if i != 7:
+            vhs_osd(img, t, f"MAY 14 1984  {mc // 60}:{mc % 60:02d}" if i >= 9 else "MAY 14 1984")
         if 9 <= i <= 19 and i not in (14, 15, 16, 17, 18) and not (i == 13 and t < T + 0.45 * D(13)):
             bug84(img, t)
     if i > 0 and t - T < 0.07:
