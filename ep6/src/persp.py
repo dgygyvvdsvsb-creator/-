@@ -212,9 +212,7 @@ def sprite_at(img, cam, sprite, X, Z, Y=0.0, height_m=1.6, rot=0, flip=False):
     """place a person sprite standing at world (X,Z) feet height Y; returns screen bbox centre"""
     hpx = height_m * cam.k(Z)
     s = hpx / 31.0
-    s = max(3, int(round(s / 3.0)) * 3)          # whole pixels on the 3-px grid -> crisp like the character sheets
-    hpx = 31.0 * s
-    w, h = 24 * s, 39 * s
+    w, h = max(1, int(24 * s)), max(1, int(39 * s))   # smooth scaling (no size jumps when running in depth)
     sp = sprite.resize((w, h), Image.NEAREST)
     if flip:
         sp = sp.transpose(Image.FLIP_LEFT_RIGHT)
@@ -320,7 +318,7 @@ def keeper_world(img, cam, X, Z, side, phase, height_m=1.6, sprite=None, peak=0.
        0.30-0.38 catch at full stretch   0.38-0.55 falls under gravity onto the grass, small bounce
        0.55-1.00 lies on the grass, ball held, slight breathing. returns glove (x, y) on screen."""
     k = cam.k(Z)
-    s = max(3, int(round(height_m * k / 31.0 / 3.0)) * 3)
+    s = height_m * k / 31.0
     if phase < 0.12:                                   # set position, sinking a little
         dip = math.sin(phase / 0.12 * math.pi) * 0.08
         ground_shadow(img, cam, X, Z, 0.45)

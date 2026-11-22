@@ -26,9 +26,9 @@ def variant_A(t, w):
     dive = clamp((w - (kick9 + 0.06)) / 0.5)
     if dive <= 0:
         ground_shadow(img, c, 0, GZ, 0.45)
-        sprite_at(img, c, hero(pose="ready", gloves=True), 0, GZ, height_m=1.6)
+        sprite_at(img, c, hero(pose="ready", gloves=True), 0, GZ, height_m=2.1)
     else:
-        k_ = c.k(GZ); sc_ = 1.6 * k_ / 31
+        k_ = c.k(GZ); sc_ = 2.1 * k_ / 31
         sp = hero(pose="reach", gloves=True, mouth="open").resize((int(24 * sc_), int(39 * sc_)), Image.NEAREST)
         lift = 0.55 * math.sin(min(dive, 0.6) / 0.6 * math.pi / 2) * (1 - clamp((dive - 0.75) / 0.25))
         X = -1.4 * ease_out(dive)
@@ -62,7 +62,7 @@ def variant_A(t, w):
         draw_ball(img, bx, by + 6, 0.6)
         impact_lines(img, *c.p(-2.2, GZ + 0.6, 1.7), 0.78, w, 10)
     img = flash(img, 0.4 * clamp(1 - abs(w - 0.8) * 10), (255, 50, 50))
-    zoom = 1.0 + 0.6 * ease_in_out(clamp((w - kick9) / 0.4))
+    zoom = 1.25 + 0.45 * ease_in_out(clamp((w - kick9 + 0.1) / 0.4))
     return cam(img, zoom, *c.p(-0.9, GZ, 0.9))
 
 
