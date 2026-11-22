@@ -1046,7 +1046,7 @@ def s_crosses(t, u, T):
     img, c = shooter_view(t, 8.5, camX=-1.0, camH=2.0, hor=470, stadium=False)
     goal3d(img, c, 8.5)
     k = int(u * 2); ph = (u * 2) % 1
-    cross = arc((-11.0, 5.5, 0.3), (0.3, 8.2, 2.3), apex=3.0)
+    cross = arc((-11.0, 5.5, 0.3), (0.3, 8.35, 1.6 * 0.66 + 0.75), apex=3.0)   # ends exactly at his hands at the top of the jump
     # an attacker (Dixon in a bib) and a defender jump too, you jump highest
     jump = math.sin(clamp((ph - 0.35) / 0.4) * math.pi)
     for X, Z, sp in ((1.4, 7.0, ours(5, view="back", pose="celebrate" if jump > 0.2 else "stand")),
@@ -1055,18 +1055,23 @@ def s_crosses(t, u, T):
         sprite_at(img, c, sp, X, Z, Y=0.35 * jump, height_m=1.55)
     ground_shadow(img, c, 0.3, 8.4, 0.45)
     hy = 0.75 * jump
-    sprite_at(img, c, hero(pose="celebrate" if jump > 0.15 else "ready", gloves=True, mouth="open" if jump > 0.5 else "flat"), 0.3, 8.4, Y=hy, height_m=1.6)
-    if ph < 0.55:
+    caught = ph >= 0.55
+    fx, fy = c.p(0.3, 8.4, hy)                   # feet on screen
+    sc = 1.6 * c.k(8.4) / 31.0
+    hands_y = fy - 37 * sc + 11.5 * sc           # glove row of the arms-up pose
+    r_ball = 0.16 * c.k(8.4)
+    if caught:                                    # ball sits IN the gloves: drawn first, gloves overlap it
+        draw_ball(img, fx, hands_y + r_ball * 0.35, r_ball / 6.5)
+    sprite_at(img, c, hero(pose="celebrate" if (jump > 0.15 or caught) else "ready", gloves=True,
+                           mouth="open" if jump > 0.5 else "flat"), 0.3, 8.4, Y=hy, height_m=1.6)
+    if not caught:
         a = ph / 0.55
         if a > 0.05:
             pretty_arc(img, c, cross, 1.0, from_=a)
         ball_trail(img, c, cross, a, 0.08)
         ball_at(img, c, *at(cross, a))
-    else:   # caught above his head
-        x, y = c.p(0.3, 8.4, 1.6 + hy + 0.55)
-        draw_ball(img, x, y, 0.16 * c.k(8.4) / 6.5)
-        if ph < 0.68:
-            glow_ring(img, x, y, 50, 0.8, (255, 255, 210))
+    elif ph < 0.68:
+        glow_ring(img, fx, hands_y, 50, 0.8, (255, 255, 210))
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([200, 290, 520, 346], 12, fill=(14, 16, 30), outline=C_Y, width=4)
     d.text((360, 318), f"CROSSES CAUGHT {k + (1 if ph > 0.55 else 0)}/2", font=font(800, 26), fill=C_Y, anchor="mm")
@@ -1096,7 +1101,7 @@ def grade(img):
     img = ImageEnhance.Color(img).enhance(0.9)
     img = Image.blend(img, Image.new("RGB", img.size, (60, 50, 70)), 0.04)
     w, h = img.size                                     # uniform pixel grid over EVERYTHING (reference look)
-    return img.resize((w // 4, h // 4), Image.BOX).resize((w, h), Image.NEAREST)
+    return img.resize((w // 3, h // 3), Image.NEAREST).resize((w, h), Image.NEAREST)   # crisp, no smearing
 
 
 SCENES = [s_hook, s_knock, s_coach, s_training, s_crosses, s_dixon_watch, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
