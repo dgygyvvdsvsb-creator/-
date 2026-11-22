@@ -816,17 +816,17 @@ def s_getup(t, u, T):
         goal3d(img, c, 10.0)
         v = u / 0.5
         draw_ball(img, *c.p(0.4, 10.9, 0), 1.0)
-        if v < 0.12:            # still going down onto his knees after the goal
-            f = v / 0.12
+        if v < 0.3:             # still going down onto his knees after the goal
+            f = ease_in_out(v / 0.3)
             ground_shadow(img, c, -0.4, 9.6, 0.5)
             sprite_at(img, c, hero(pose="sit", gloves=True, mouth="sad"), -0.4, 9.6, Y=-0.3 * f, height_m=1.6)
-        elif v < 0.35:
+        elif v < 0.5:
             sp_s = 1.6 * c.k(9.9) / 31
             sp = hero(pose="reach", gloves=True, blink=True).resize((int(24 * sp_s), int(39 * sp_s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
             x, y = c.p(-0.6, 9.6)
             img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * sp_s)))
         else:
-            k = ease_out((v - 0.35) / 0.3)
+            k = ease_out((v - 0.5) / 0.3)
             ground_shadow(img, c, -0.4, 9.6, 0.5)
             sprite_at(img, c, hero(pose="sit" if k < 0.5 else "stand", gloves=True, mouth="flat"), -0.4, 9.6, height_m=1.6)
             glow_ring(img, *c.p(-0.4, 9.6, 1.0), 120 * k, 0.4 * k, (255, 240, 180))
@@ -892,7 +892,7 @@ def s_lastkick(t, u, T):
         pitch_persp(img, c, Zgoal=14.0)
         goal3d(img, c, 14.0)
         kick = 0.45
-        a = clamp((v - kick) / 0.55) * 0.6
+        a = clamp((v - kick) / 0.55) * 0.4
         ground_shadow(img, c, 0, 14, 0.45)
         sprite_at(img, c, hero(pose="ready", gloves=True), 0, 14, height_m=1.6)
         if a > 0:
@@ -926,7 +926,7 @@ def s_lastkick(t, u, T):
     else:
         b = clamp((v - hit) / 0.6)
         Yb = 2.05 + 0.6 * math.sin(b * math.pi) - 2.05 * b * b if b < 0.82 else 0.25 * abs(math.sin((b - 0.82) / 0.18 * math.pi))
-        bx, by = c.p(2.25 + 0.5 * b, 6.0 + 2.2 * b, max(0.0, Yb))
+        bx, by = c.p(2.25 + 1.7 * b, 6.0 + 2.2 * b, max(0.0, Yb))
     draw_ball(img, bx, by, 1.6)
     th = T + (0.4 + 0.6 * hit) * D(16)
     if v >= hit:
