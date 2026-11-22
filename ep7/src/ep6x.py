@@ -33,7 +33,7 @@ LINES = [
     [("NUMBER", W), ("NINE", B), ("LOOKS", W), ("DOWN.", W), ("NO", W), ("ONE", W), ("SEES", W), ("HIS", W), ("FACE.", R_)],
     [("TODAY.", W), ("THE", W), ("COACH'S", W), ("WHISTLE", Y), ("FALLS.", R_)],
     [("ACCIDENT...", B), ("OR", W), ("ON", R_), ("PURPOSE?", R_)],
-    [("VOTE", W), ("BELOW.", G), (FOLLOW, R_), ("FOR", W), ("PART 7.", Y)],
+    [("VOTE", W), ("BELOW.", G), (FOLLOW, R_), ("FOR", W), ("PART 8.", Y)],
 ]
 PAST = set(range(4, 22)) | {0}          # scenes shown on old VHS tape
 _vf = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"vo/lines_{PLATFORM}.json")
