@@ -39,7 +39,10 @@ LINES = [
 ]
 _vf = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vo/ep6_lines.json")
 if os.path.exists(_vf):
-    VOICE = [tuple(x) for x in json.load(open(_vf))["lines"]]
+    _j = json.load(open(_vf))
+    VOICE = [tuple(x) for x in _j["lines"]]
+    if PLATFORM == "youtube":   # last line: "Vote below." + the separate "Subscribe for part seven" take
+        VOICE[-1] = (VOICE[-1][0], VOICE[-1][0] + (_j["yt_tail"][1] - _j["yt_tail"][0]))
 else:   # estimated narration timing (no voice yet)
     VOICE, t0 = [], 0.05
     for ws in LINES:
@@ -47,7 +50,7 @@ else:   # estimated narration timing (no voice yet)
         VOICE.append((t0, t0 + d_)); t0 += d_ + 0.47
 STARTS = [max(0.0, a - 0.12) for a, _ in VOICE]
 STARTS[0] = 0.0
-TOTAL = max(VOICE[-1][1] + 1.6, 61.5)
+TOTAL = max(VOICE[-1][1] + 1.4, 61.5)
 
 
 def word_times(i):
