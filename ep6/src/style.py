@@ -584,7 +584,7 @@ def caption(img, words, t, wrap=600, y=108, size=50):
         tot = sum(ww for _, ww in ln) + sp * (len(ln) - 1)
         x = (FW - tot) / 2
         for (txt, st, col), ww in ln:
-            d.text((x, y), txt, font=f, fill=col if t >= st else C_DIM, stroke_width=5, stroke_fill=OL)
+            d.text((x, y), txt, font=f, fill=col if t >= st else C_DIM, stroke_width=6, stroke_fill=OL)
             x += ww + sp
         y += size + 6
 

@@ -41,3 +41,9 @@ Every new episode must look like these. Read this file before starting any episo
 ## Audio
 - One narrator (George, ElevenLabs eleven_v4), second person, short sentences. No music. SFX: crowd, kicks, net, whistle,
   heartbeat for tension; near-silence before the decisive moment.
+
+## Implementation notes (ep6/src)
+- `persp.backdrop(stadium=True)`: night-navy top band, tiers of big pixel fans (6-px pixels, red/white/navy shirts),
+  red/white ad band, then the pitch. `stadium=False`: clear blue sky, round pixel trees, fence (training).
+- Pixel pass `ep6.grade()` → labels/score bars are drawn after it (DEFER) so text stays crisp.
+- UI screens: `ep6.navy_bg()`; lower thirds: `ep6.lower_third()`; ending: `ep6.s_end()`.

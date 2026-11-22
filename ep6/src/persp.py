@@ -37,68 +37,82 @@ _c = {}
 SKY_T, SKY_B = (52, 70, 128), (246, 182, 112)
 
 
-def backdrop(hor=HOR, sun=(560, 300), stadium=False):
-    key = ("bd", hor, sun, stadium)
+def _fan(d, x, y, s, shirt, skin, hair, scarf=None):
+    """one pixel fan (head + shoulders), s = pixel size"""
+    R = lambda x0, y0, w, h, c: d.rectangle([x + x0 * s, y + y0 * s, x + (x0 + w) * s - 1, y + (y0 + h) * s - 1], fill=c)
+    R(0, 4, 6, 4, shirt)                  # shoulders / torso
+    R(1, 0, 4, 4, skin)                   # head
+    R(1, 0, 4, 1, hair)                   # hair
+    R(1, 2, 1, 1, (20, 20, 30)); R(3, 2, 1, 1, (20, 20, 30))   # eyes
+    if scarf:
+        R(0, 4, 6, 1, scarf)
+
+
+def backdrop(hor=HOR, sun=None, stadium=False):
+    """reference look. stadium: night-navy top + tiers of big pixel fans down to the pitch.
+    training: clear blue sky + round pixel trees + fence."""
+    key = ("bd2", hor, stadium)
     if key in _c:
         return _c[key].copy()
     img = Image.new("RGB", (FW, FH))
     d = ImageDraw.Draw(img)
-    for y in range(hor + 40):
-        d.line([(0, y), (FW, y)], fill=tuple(int(lerp(a, b, clamp(y / (hor + 40)) ** 1.3)) for a, b in zip(SKY_T, SKY_B)))
-    img = img.convert("RGBA")
-    glow(img, sun[0], sun[1], 70, (255, 236, 170), 0.95)
-    for r, a in ((220, 70), (140, 90)):
-        g = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        ImageDraw.Draw(g).ellipse([sun[0] - r, sun[1] - r, sun[0] + r, sun[1] + r], fill=(255, 210, 140, a))
-        img.alpha_composite(g.filter(ImageFilter.GaussianBlur(r / 3)))
-    # pixel tree line (drawn at 1/4 res, upscaled NEAREST)
-    lw, lh = FW // 4, (hor + 10) // 4
-    lay = Image.new("RGBA", (lw, lh), (0, 0, 0, 0))
-    ld = ImageDraw.Draw(lay)
-    rng = random.Random(9)
-    base = lh - 6
-    x = -6
-    while x < lw + 6:
-        w = rng.randint(14, 24)
-        h = rng.randint(18, 30)
-        tx = x + w // 2
-        ld.rectangle([tx - 1, base - 8, tx + 1, base], fill=(70, 46, 34, 255))       # trunk
-        for k in range(4):                                                               # leafy blobs
-            cx_ = tx + rng.randint(-w // 3, w // 3)
-            cy_ = base - 8 - rng.randint(4, h - 6)
-            r = rng.randint(5, 8)
-            ld.ellipse([cx_ - r, cy_ - r, cx_ + r, cy_ + r], fill=(46, 92, 52, 255))
-        ld.ellipse([tx - w // 2, base - h, tx + w // 2, base - 8], fill=(40, 84, 48, 255))
-        for k in range(5):  # sunlit leaves on the sun side
-            px = tx + rng.randint(0, w // 2)
-            py = base - h + rng.randint(2, h // 2)
-            ld.point((px, py), fill=(120, 150, 70, 255))
-            ld.point((px + 1, py), fill=(150, 170, 80, 255))
-        x += w - 4
-    big_ = lay.resize((lw * 4, lh * 4), Image.NEAREST)
-    img.alpha_composite(big_, (0, 0))
-    if stadium:   # stand full of fans in front of the trees
-        crowd_band(img, hor - 150, hor - 24, seed=hor, blur=1.2)
-        img_d = ImageDraw.Draw(img)
-        img_d.rectangle([0, hor - 30, FW, hor - 22], fill=(40, 36, 60))
-    # fence with posts in front of the trees
-    d = ImageDraw.Draw(img)
-    fy = hor - 30
     if stadium:
-        _ads(img, hor - 22, hor + 4)
-        _c[key] = img
-        return img.copy()
-    d.rectangle([0, fy, FW, hor + 4], fill=(110, 116, 140))
-    for xx in range(0, FW, 10):
-        d.line([(xx, fy), (xx + 10, hor + 4)], fill=(150, 156, 176), width=1)
-        d.line([(xx + 10, fy), (xx, hor + 4)], fill=(150, 156, 176), width=1)
-    for xx in range(0, FW, 60):
-        d.rectangle([xx, fy - 6, xx + 4, hor + 4], fill=(70, 74, 92))
-    d.rectangle([0, fy - 6, FW, fy - 3], fill=(70, 74, 92))
+        for y in range(hor + 40):
+            d.line([(0, y), (FW, y)], fill=tuple(int(lerp(a, b, clamp(y / (hor + 40)))) for a, b in zip((4, 6, 18), (18, 28, 60))))
+        rng = random.Random(hor)
+        shirts = [(200, 40, 50), (235, 235, 240), (30, 50, 110), (200, 40, 50), (235, 235, 240), (40, 168, 74)]
+        skins = [(240, 196, 160), (205, 150, 110), (150, 98, 66), (104, 66, 46)]
+        hairs = [(40, 28, 24), (20, 18, 22), (230, 196, 90), (150, 80, 40), (90, 60, 40)]
+        s = 6
+        row_h = 9 * s
+        y = hor - 26 - row_h
+        r = 0
+        while y > 200:
+            d.rectangle([0, y + 8 * s, FW, y + row_h], fill=(36, 44, 86) if r % 2 else (44, 54, 100))   # seat row
+            x = (r % 2) * 3 * s - 6
+            while x < FW:
+                if rng.random() < 0.9:
+                    _fan(d, x, y, s, rng.choice(shirts), rng.choice(skins), rng.choice(hairs),
+                         (250, 250, 250) if rng.random() < 0.12 else None)
+                x += 7 * s
+            y -= row_h
+            r += 1
+        # red/white advertising band in front of the stand
+        for k in range(0, FW, 60):
+            d.rectangle([k, hor - 26, k + 60, hor - 4], fill=(200, 40, 50) if (k // 60) % 2 else (235, 235, 240))
+            d.rectangle([k + 14, hor - 18, k + 46, hor - 12], fill=(235, 235, 240) if (k // 60) % 2 else (200, 40, 50))
+        d.rectangle([0, hor - 4, FW, hor + 4], fill=(28, 90, 50))
+        img = img.convert("RGBA")
+    else:
+        for y in range(hor + 40):
+            d.line([(0, y), (FW, y)], fill=tuple(int(lerp(a, b, clamp(y / (hor + 40)))) for a, b in zip((96, 160, 228), (176, 214, 240))))
+        img = img.convert("RGBA")
+        lw, lh = FW // 4, (hor + 10) // 4
+        lay = Image.new("RGBA", (lw, lh), (0, 0, 0, 0))
+        ld = ImageDraw.Draw(lay)
+        rng = random.Random(9)
+        base = lh - 6
+        x = -6
+        while x < lw + 6:
+            w = rng.randint(14, 24)
+            h = rng.randint(18, 30)
+            tx = x + w // 2
+            ld.rectangle([tx - 1, base - 8, tx + 1, base], fill=(90, 60, 40, 255))
+            ld.ellipse([tx - w // 2, base - h, tx + w // 2, base - 6], fill=(46, 120, 62, 255))
+            ld.ellipse([tx - w // 2 + 2, base - h + 2, tx + 2, base - h // 2], fill=(70, 150, 80, 255))
+            x += w - 4
+        img.alpha_composite(lay.resize((lw * 4, lh * 4), Image.NEAREST), (0, 0))
+        d = ImageDraw.Draw(img)
+        fy = hor - 30
+        d.rectangle([0, fy, FW, hor + 4], fill=(110, 116, 140))
+        for xx in range(0, FW, 10):
+            d.line([(xx, fy), (xx + 10, hor + 4)], fill=(150, 156, 176), width=1)
+            d.line([(xx + 10, fy), (xx, hor + 4)], fill=(150, 156, 176), width=1)
+        for xx in range(0, FW, 60):
+            d.rectangle([xx, fy - 6, xx + 4, hor + 4], fill=(70, 74, 92))
+        d.rectangle([0, fy - 6, FW, fy - 3], fill=(70, 74, 92))
     _c[key] = img
     return img.copy()
-
-
 def _ads(img, y0, y1):
     d = ImageDraw.Draw(img)
     cols = [(210, 52, 56), (40, 90, 200), (246, 206, 40), (40, 150, 80)]
