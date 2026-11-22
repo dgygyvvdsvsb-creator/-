@@ -70,7 +70,7 @@ def overlay(img, t, i):
             cur = c
     if i == 0 and t < 0.4:
         cur = [(w, -1, c) for w, _, c in cur]
-    caption(img, cur, t, size=56, wrap=620)
+    caption(img, cur, t, size=62, wrap=640)
 
 
 # ------------------------------------------------------------------ cast
@@ -98,13 +98,30 @@ def opp_keeper(**kw):
     return dixon(**kw)
 
 
+DEFER = []          # text/labels drawn after the pixel grade, so they stay crisp
+_pill_raw = pill
+_scoreboard_raw = scoreboard
+
+
+def mini_score(img, t, minute):
+    DEFER.append(lambda im: _mini_score(im, t, minute))
+
+
+def pill(img, *a, **k):
+    DEFER.append(lambda im: _pill_raw(im, *a, **k))
+
+
+def scoreboard(img, *a, **k):
+    DEFER.append(lambda im: _scoreboard_raw(im, *a, **k))
+
+
 def score_state(t):
     l = 1 if t >= STARTS[15] + 0.6 * (STARTS[16] - STARTS[15]) else 0
     r = 1 if t >= STARTS[10] + 0.35 * (STARTS[11] - STARTS[10]) else 0
     return l, r
 
 
-def mini_score(img, t, minute):
+def _mini_score(img, t, minute):
     l, r = score_state(t)
     d = ImageDraw.Draw(img)
     y = 290
@@ -1039,11 +1056,12 @@ def eyes_set(t):
     return img, c
 
 
-def fk_wall_and_kicker(img, c, t, kick_pose=None, kp=0.0, peek=0.0):
+def fk_wall_and_kicker(img, c, t, kick_pose=None, kp=0.0, peek=0.0, ball=True):
     # their captain behind the wall: you only catch a glimpse of him between two heads
     ground_shadow(img, c, FKP[0] - 0.55, FKP[1] + 0.6, 0.35)
     sprite_at(img, c, opp(10, pose=kick_pose or "stand", phase=kp), FKP[0] - 0.55 + peek, FKP[1] + 0.6, height_m=1.55)
-    ball_at(img, c, FKP[0], FKP[1] - 0.2, 0.0)
+    if ball:
+        ball_at(img, c, FKP[0], FKP[1] - 0.2, 0.0)
     for i, X in enumerate((-1.1, -0.35, 0.4, 1.15)):      # OUR wall, backs to you, arms crossed
         ground_shadow(img, c, X, 9.15, 0.32)
         sprite_at(img, c, ours((4, 5, 9, 6)[i], view="back"), X, 9.15, height_m=1.55)
@@ -1073,7 +1091,7 @@ def s_slowmo(t, u, T):
     img, c = eyes_set(t)
     kick = 0.12
     kp = clamp((u - kick + 0.06) / 0.1)
-    fk_wall_and_kicker(img, c, t, kick_pose="kick" if u > kick - 0.06 else None, kp=kp)
+    fk_wall_and_kicker(img, c, t, kick_pose="kick" if u > kick - 0.06 else None, kp=kp, ball=u < kick)
     a = 0.0 if u < kick else 0.85 * ((u - kick) / (1 - kick)) ** 1.25     # slow motion, speeding up at the end
     wall_jump = 0.35 * math.sin(clamp((u - kick) / 0.35) * math.pi) if u > kick else 0
     if a > 0:
@@ -1400,8 +1418,11 @@ def frame(t):
     T = STARTS[i]
     end = STARTS[i + 1] if i + 1 < len(STARTS) else TOTAL
     u = clamp((t - T) / max(0.1, end - T))
+    DEFER.clear()
     img = SCENES[i](t, u, T).convert("RGB")
     img = grade(img).convert("RGBA")
+    for fn in DEFER:
+        fn(img)
     if i > 0 and t - T < 0.07 and SCENES[i] is not SCENES[i - 1]:
         img = flash(img, 0.3)
     overlay(img, t, i)
