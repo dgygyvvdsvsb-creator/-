@@ -132,7 +132,7 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
             R(5, 24, 7, 25, kit.socks); R(10, 24, 12, 25, kit.socks)
             R(4, 26, 7, 26, OL); R(10, 26, 13, 26, OL)
         else:
-            spread = 1 if pose in ("ready", "celebrate") else 0
+            spread = 2 if pose == "spread" else (1 if pose in ("ready", "celebrate") else 0)
             for lx in (5 - spread, 10 + spread):
                 R(lx, 18, lx + 2, 21, legc)
                 R(lx, 22, lx + 2, 25, kit.socks)
@@ -187,6 +187,8 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 1, 13 + int(s * 2)); arm(1, 16, 13 - int(s * 2))
     elif pose == "ready":
         arm(-1, -1, 11); arm(1, 18, 11)
+    elif pose == "spread":   # star jump: arms wide and high
+        arm(-1, -4, 3); arm(1, 21, 3)
     elif pose in ("celebrate", "dive"):
         arm(-1, 2, 1); arm(1, 15, 1)
     elif pose == "reach":   # arms stretched far beyond the head (flying save)
@@ -265,6 +267,10 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
                 P(x, 1, shade(hc, 1.35)); P(x - 1, 4, shade(hc, 1.35))
         if style == "bald":
             R(5, -1, 12, 3, sk)
+        if style == "cap":
+            NAVY, NAVY_D = (34, 46, 96), (22, 30, 66)
+            R(4, -3, 13, -3, NAVY); R(3, -2, 14, 3, NAVY); R(11, -2, 14, 3, NAVY_D)
+            R(3, 3, 14, 3, NAVY_D)
     if extra:
         for fn in extra:
             fn(d, ox, oy)
