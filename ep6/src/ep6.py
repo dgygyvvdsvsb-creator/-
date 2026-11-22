@@ -26,8 +26,8 @@ LINES = [
     [("CORNER.", W), ("HEADER.", W), ("YOU", W), ("FLY.", Y), ("SAVED!", G)],
     [("ONE", W), ("ON", W), ("ONE.", W), ("YOU", W), ("SPREAD", W), ("BIG.", Y), ("SAVED", G), ("AGAIN!", G)],
     [("THEN", W), ("MASON", R_), ("SCORES.", G), ("ONE,", W), ("ONE.", Y)],
-    [("LAST", R_), ("MINUTE.", R_), ("FREE", W), ("KICK.", W), ("EDGE", W), ("OF", W), ("THE", W), ("BOX.", W)],
-    [("HOW?", Y), ("MASON", R_), ("LOSES", W), ("IT.", W), ("FIVE", W), ("TRIPS", R_), ("THEIR", W), ("CAPTAIN.", B)],
+    [("LAST", R_), ("MINUTE.", R_), ("MASON", R_), ("LOSES", W), ("IT.", W), ("FIVE", W), ("TRIPS", R_), ("THEIR", W), ("CAPTAIN.", B)],
+    [("YELLOW", Y), ("CARD.", Y), ("FREE", W), ("KICK.", W), ("EDGE", W), ("OF", W), ("THE", W), ("BOX.", W)],
     [("THEIR", W), ("CAPTAIN.", B), ("TOP", Y), ("CORNER.", Y)],
     [("YOU", W), ("SEE", W), ("IT", W), ("EARLY.", Y), ("YOU", W), ("PUSH", W), ("OFF.", W)],
     [("FINGERTIPS.", Y), ("CROSSBAR.", W), ("OUT!", G)],
@@ -1256,23 +1256,20 @@ def s_foul(t, u, T):
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height)))
         ball_at(img, c, cx + 0.3 + 1.5 * f, cz + 1.2 + 2.0 * f, 0.11)
         hx, hy = c.p(0.8, 10.4, 0.3)
-        impact_lines(img, hx, hy, T + foul * (STARTS[18] - T), t, 12)
+        impact_lines(img, hx, hy, T + foul * (STARTS[17] - T), t, 12)
         glow_ring(img, hx, hy, 70, 0.8 * (1 - f), (255, 70, 70))
         # referee's whistle -> yellow card
         if u > foul + 0.15:
-            kk = spring(t - T - (foul + 0.15) * (STARTS[18] - T), 13, 7)
+            kk = spring(t - T - (foul + 0.15) * (STARTS[17] - T), 13, 7)
             d = ImageDraw.Draw(img)
             w_, h_ = 70 * kk, 100 * kk
             d.rounded_rectangle([560 - w_ / 2, 820 - h_ / 2, 560 + w_ / 2, 820 + h_ / 2], 8, fill=(250, 210, 40), outline=OL, width=5)
             pill(img, 360, 1020, "FREE KICK", (200, 40, 50), kk, 40)
-    # it's a flashback: slightly faded, with a small label
-    img = Image.blend(img.convert("RGB"), Image.new("RGB", img.size, (40, 40, 60)), 0.12).convert("RGBA")
     if u < lose + 0.1 and u > lose - 0.05:
-        impact_lines(img, *c.p(-0.7, mz + 0.5, 0.2), T + lose * (STARTS[18] - T), t, 8)
+        impact_lines(img, *c.p(-0.7, mz + 0.5, 0.2), T + lose * (STARTS[17] - T), t, 8)
     fx, fy = c.p(0.6, lerp(8, 10.4, clamp(u / foul)), 0.6)
-    out = cam(img, 1.15 + 0.2 * ease_in_out(clamp(u / foul)), fx, fy, *shake(t, T + foul * (STARTS[18] - T), .3, 12)).convert("RGBA")
+    out = cam(img, 1.15 + 0.2 * ease_in_out(clamp(u / foul)), fx, fy, *shake(t, T + foul * (STARTS[17] - T), .3, 12)).convert("RGBA")
     mini_score(out, t, "89'")
-    pill(out, 360, 420, "20 SECONDS EARLIER", (60, 60, 80), 1.0, 24)
     return out
 
 
@@ -1354,7 +1351,7 @@ def grade(img):
 
 
 SCENES = [s_hook, s_knock, s_coach, s_training, s_crosses, s_dixon_watch, s_notyet, s_okafor, s_walkout, s_attackA, s_attackA, s_mason, s_getup,
-          s_header, s_1v1_v2, s_mason_goal, s_fk_tease, s_foul, s_fk, s_slowmo, s_finger_v2, s_whistle, s_pen, s_choice, s_end]
+          s_header, s_1v1_v2, s_mason_goal, s_foul, s_fk_tease, s_fk, s_slowmo, s_finger_v2, s_whistle, s_pen, s_choice, s_end]
 
 
 def line_at(t):

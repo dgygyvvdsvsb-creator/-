@@ -38,7 +38,7 @@ for k in range(10): thud(S[22]+0.2+k*0.55,.6)
 whoosh(S[24])
 for q in range(2):
     t0=S[4]+q*D[4]/2; kick(t0+0.05,0.6); thud(t0+0.55*D[4]/2,0.7)
-whistle(S[17]+0.62*D[17],0.6); thud(S[17]+0.6*D[17],1.3); groan(S[17]+0.6*D[17])
+whistle(S[16]+0.62*D[16],0.6); thud(S[16]+0.6*D[16],1.3); groan(S[16]+0.6*D[16])
 out[-int(.4*sr):]*=np.linspace(1,0,int(.4*sr))
 out/=max(1,np.abs(out).max()/0.9)
 w=wave.open("sfx6.wav","wb");w.setnchannels(1);w.setsampwidth(2);w.setframerate(sr);w.writeframes((out*32767).astype(np.int16).tobytes());w.close()
