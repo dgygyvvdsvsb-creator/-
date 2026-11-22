@@ -6,7 +6,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageChops
 
 FW, FH, FPS = 720, 1280, 30
-FONTDIR = "/tmp/claude-0/-home-user--/67093071-fe87-56fe-a818-3433aa12d626/scratchpad/fonts/"
+import os as _os
+FONTDIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "fonts") + "/"
 OL = (22, 18, 28)
 
 SKIN = {"light": ((240, 196, 160), (214, 164, 128)), "tan": ((205, 150, 110), (176, 122, 86)),
@@ -85,7 +86,7 @@ def outline(im, col=OL):
 
 
 def person(kit=None, skin="light", hair="dark", style="short", pose="stand", view="front", phase=0.0,
-           blink=False, mouth="flat", look=0, gloves=False, bracelet=False, extra=None):
+           blink=False, mouth="flat", look=0, gloves=False, bracelet=False, extra=None, trousers=False):
     """returns an RGBA sprite (W=24 x H=34 incl. 3px margin) with outline. extra: list of callables(d)"""
     W, H = 24, 39
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -94,6 +95,7 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
     hc = HAIR[hair]
     kit = kit or Kit((60, 120, 200), (30, 34, 50), (60, 120, 200))
     ox, oy = 3, 10  # margin so outline/limbs fit
+    legc = kit.shorts if trousers else sk
     R = lambda x0, y0, x1, y1, c: d.rectangle([ox + x0, oy + y0, ox + x1, oy + y1], fill=c)
     P = lambda x, y, c: d.point((ox + x, oy + y), fill=c)
 
@@ -103,36 +105,36 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
             s = math.sin(phase * math.tau)
             off = int(round(s * 2))
             for lx, o in ((5, off), (10, -off)):
-                R(lx, 18 + max(0, -o) // 2, lx + 2, 21, sk)
+                R(lx, 18 + max(0, -o) // 2, lx + 2, 21, legc)
                 R(lx + o // 2, 22, lx + 2 + o // 2, 25 - max(0, o) // 2, kit.socks)
                 R(lx - 1 + o // 2, 26 - max(0, o) // 2, lx + 2 + o // 2, 27 - max(0, o) // 2, OL)
         elif pose == "kick":
-            R(5, 18, 7, 21, sk); R(5, 22, 7, 25, kit.socks); R(4, 26, 7, 27, OL)
+            R(5, 18, 7, 21, legc); R(5, 22, 7, 25, kit.socks); R(4, 26, 7, 27, OL)
             k = phase  # 0 back .. 1 through
             ang = lerp(-0.9, 1.1, k)
             for i in range(9):
                 x = 11 + math.sin(ang) * i
                 y = 18 + math.cos(ang) * i
-                c = sk if i < 4 else (kit.socks if i < 8 else OL)
+                c = legc if i < 4 else (kit.socks if i < 8 else OL)
                 R(int(x) - 1, int(y), int(x) + 1, int(y), c)
         elif pose == "kickL":   # strikes with the screen-LEFT leg (player's left foot when seen from behind)
-            R(10, 18, 12, 21, sk); R(10, 22, 12, 25, kit.socks); R(10, 26, 13, 27, OL)
+            R(10, 18, 12, 21, legc); R(10, 22, 12, 25, kit.socks); R(10, 26, 13, 27, OL)
             k = phase
             ang = lerp(-0.9, 1.1, k)
             for i in range(9):
                 x = 6 - math.sin(ang) * i
                 y = 18 + math.cos(ang) * i
-                c = sk if i < 4 else (kit.socks if i < 8 else OL)
+                c = legc if i < 4 else (kit.socks if i < 8 else OL)
                 R(int(x) - 1, int(y), int(x) + 1, int(y), c)
         elif sit or pose in ("sit", "hurt"):
             R(5, 18, 7, 20, kit.shorts); R(10, 18, 12, 20, kit.shorts)
-            R(5, 21, 7, 23, sk); R(10, 21, 12, 23, sk)
+            R(5, 21, 7, 23, legc); R(10, 21, 12, 23, legc)
             R(5, 24, 7, 25, kit.socks); R(10, 24, 12, 25, kit.socks)
             R(4, 26, 7, 26, OL); R(10, 26, 13, 26, OL)
         else:
-            spread = 1 if pose in ("ready", "celebrate") else 0
+            spread = 2 if pose == "spread" else (1 if pose in ("ready", "celebrate") else 0)
             for lx in (5 - spread, 10 + spread):
-                R(lx, 18, lx + 2, 21, sk)
+                R(lx, 18, lx + 2, 21, legc)
                 R(lx, 22, lx + 2, 25, kit.socks)
                 R(lx, 23, lx + 2, 23, shade(kit.socks, 0.85))
                 R(lx - (1 if lx < 8 else 0), 26, lx + 2 + (1 if lx > 8 else 0), 27, OL)
@@ -185,6 +187,8 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 1, 13 + int(s * 2)); arm(1, 16, 13 - int(s * 2))
     elif pose == "ready":
         arm(-1, -1, 11); arm(1, 18, 11)
+    elif pose == "spread":   # star jump: arms wide and high
+        arm(-1, -4, 3); arm(1, 21, 3)
     elif pose in ("celebrate", "dive"):
         arm(-1, 2, 1); arm(1, 15, 1)
     elif pose == "reach":   # arms stretched far beyond the head (flying save)
@@ -263,6 +267,10 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
                 P(x, 1, shade(hc, 1.35)); P(x - 1, 4, shade(hc, 1.35))
         if style == "bald":
             R(5, -1, 12, 3, sk)
+        if style == "cap":
+            NAVY, NAVY_D = (34, 46, 96), (22, 30, 66)
+            R(4, -3, 13, -3, NAVY); R(3, -2, 14, 3, NAVY); R(11, -2, 14, 3, NAVY_D)
+            R(3, 3, 14, 3, NAVY_D)
     if extra:
         for fn in extra:
             fn(d, ox, oy)
@@ -300,7 +308,7 @@ def grandad(pose="sit", blink=False, mouth="smile", tube=False, look=0):
     if tube:
         SKIN["ill"] = ((222, 190, 168), (196, 164, 146))
     im = person(card, skin="ill" if tube else "old", hair="white", style="bald", pose="sit" if pose == "sit" else "stand",
-                blink=blink, mouth="flat", extra=[details])
+                blink=blink, mouth="flat", extra=[details], trousers=True)
     return im
 
 
