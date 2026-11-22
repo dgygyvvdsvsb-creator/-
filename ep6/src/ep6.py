@@ -1060,10 +1060,20 @@ def s_crosses(t, u, T):
     sc = 1.6 * c.k(8.4) / 31.0
     hands_y = fy - 37 * sc + 11.5 * sc           # glove row of the arms-up pose
     r_ball = 0.16 * c.k(8.4)
-    if caught:                                    # ball sits IN the gloves: drawn first, gloves overlap it
-        draw_ball(img, fx, hands_y + r_ball * 0.35, r_ball / 6.5)
     sprite_at(img, c, hero(pose="celebrate" if (jump > 0.15 or caught) else "ready", gloves=True,
                            mouth="open" if jump > 0.5 else "flat"), 0.3, 8.4, Y=hy, height_m=1.6)
+    if caught:   # ball IN FRONT of him, clasped by both gloves above his head
+        rb = max(r_ball, 3.6 * sc)
+        bx_, by_ = fx - 0.5 * sc, hands_y - 6.0 * sc          # held up above his head, clearly in front
+        draw_ball(img, bx_, by_ + rb, rb / 6.5)
+        r_ball = rb
+        dg = ImageDraw.Draw(img)
+        for sg in (-1, 1):
+            gx_ = bx_ + sg * (r_ball + 0.4 * sc)
+            gy_ = by_ + 0.8 * sc
+            dg.line([(gx_, gy_ + 2 * sc), (bx_ + sg * 5.5 * sc, hands_y + 4 * sc)], fill=OL, width=int(3.0 * sc))   # forearms up to the ball
+            dg.line([(gx_, gy_ + 2 * sc), (bx_ + sg * 5.5 * sc, hands_y + 4 * sc)], fill=SKIN["light"][0], width=int(1.8 * sc))
+            dg.rounded_rectangle([gx_ - 1.5 * sc, gy_ - 2.0 * sc, gx_ + 1.5 * sc, gy_ + 2.0 * sc], int(0.8 * sc), fill=(252, 140, 27), outline=OL, width=max(2, int(sc * 0.5)))
     if not caught:
         a = ph / 0.55
         if a > 0.05:
@@ -1071,7 +1081,7 @@ def s_crosses(t, u, T):
         ball_trail(img, c, cross, a, 0.08)
         ball_at(img, c, *at(cross, a))
     elif ph < 0.68:
-        glow_ring(img, fx, hands_y, 50, 0.8, (255, 255, 210))
+        glow_ring(img, fx - 1 * sc, hands_y, 50, 0.8, (255, 255, 210))
     d = ImageDraw.Draw(img)
     d.rounded_rectangle([200, 290, 520, 346], 12, fill=(14, 16, 30), outline=C_Y, width=4)
     d.text((360, 318), f"CROSSES CAUGHT {k + (1 if ph > 0.55 else 0)}/2", font=font(800, 26), fill=C_Y, anchor="mm")
