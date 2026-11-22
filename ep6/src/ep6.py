@@ -1084,20 +1084,20 @@ def s_crosses(t, u, T):
     k = min(1, int(u * 2)); ph = (u * 2) % 1 if u < 1 else 1.0
     sd = -1 if k == 0 else 1                         # wing side: left first, then right
     GZ, KX = 8.5, 0.15 * sd
-    wing = (4.3 * sd, 6.6)                           # winger on the flank
-    head = (0.9 * -sd, 6.4)                          # striker in the middle
-    other = (-1.6 * -sd, 7.4)                        # a defender marking (stays on the ground)
+    wing = (2.5 * sd, 3.4)                           # winger nearer the camera, on the flank                           # winger on the flank
+    head = (0.6 * -sd, 5.6)                          # striker in the middle
+    other = (-1.7 * -sd, 6.4)                        # a defender marking (stays on the ground)
     c = Cam(camX=1.3 * sd, camH=2.2, hor=560, f=560)
     img = backdrop(560, stadium=False)
     pitch_persp(img, c, Zgoal=GZ)
     goal3d(img, c, GZ)
     kick, hit, catch = 0.12, 0.46, 0.66
     hand_y = 1.6 + 0.55
-    cross = arc((wing[0] - 0.3 * sd, wing[1] + 0.2, 0.1), (head[0], head[1], 1.95), apex=2.6)
-    header = arc((head[0], head[1], 1.95), (KX, GZ - 0.1, hand_y + 0.55), apex=0.25)
+    cross = arc((wing[0] - 0.3 * sd, wing[1] + 0.2, 0.1), (head[0], head[1], 1.95), apex=0.9)   # whipped in, toward the striker (away from camera)
+    header = arc((head[0], head[1], 1.95), (KX, GZ - 0.1, hand_y + 0.25), apex=0.1)
     # winger
     ground_shadow(img, c, *wing, 0.35)
-    sprite_at(img, c, ours(7 if k == 0 else 11, pose="kick" if ph < kick + 0.05 else "stand", phase=clamp(ph / kick)), *wing, height_m=1.55)
+    sprite_at(img, c, ours(7 if k == 0 else 11, view="back", pose="kick" if ph < kick + 0.05 else "stand", phase=clamp(ph / kick)), *wing, height_m=1.55)
     # defender, stays down
     ground_shadow(img, c, *other, 0.35)
     sprite_at(img, c, ours(4, view="back", pose="stand"), *other, height_m=1.55)
