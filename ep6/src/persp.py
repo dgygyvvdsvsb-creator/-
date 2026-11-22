@@ -109,7 +109,7 @@ def _ads(img, y0, y1):
         d.text((x + 70, (y0 + y1) / 2), labs[k % 4], font=font(800, 16), fill=(255, 255, 255), anchor="mm")
 
 
-GRASS_A, GRASS_B = (56, 142, 78), (48, 128, 70)     # deep green, like the reference
+GRASS_A, GRASS_B = (42, 150, 72), (36, 132, 60)     # saturated green, like the reference
 LINE = (240, 244, 236)
 
 

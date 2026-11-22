@@ -410,7 +410,7 @@ def s_walkout(t, u, T):
         ring = Image.new("RGBA", img.size, (0, 0, 0, 0))
         ImageDraw.Draw(ring).ellipse([hx - 34, hy - 6, hx + 34, hy + 16], outline=C_G + (230,), width=5)   # ring on the grass under his feet
         img.alpha_composite(ring)
-    pill(img, 360, 1250, "FIRST TEAM vs RESERVES", (14, 16, 30), spring(t - T - 0.2, 13, 7), 26)
+    lower_third(img, "WEDNESDAY · TRAINING MATCH", "1ST TEAM vs RESERVES", spring(t - T - 0.2, 13, 7))
     return cam(img, 1 + 0.12 * ease_in_out(clamp((u - 0.5) / 0.5)), 360, 1180)
 
 
@@ -1495,12 +1495,127 @@ def s_pen(t, u, T, choice=False):
     return _pen_prev(t, u, T, choice)
 
 
+# ===================== remi_sport look: navy UI, lower thirds, choice cards =====================
+_navy_cache = {}
+
+
+def navy_bg():
+    """deep navy with a subtle diagonal diamond pattern and a soft centre glow (reference UI screens)"""
+    if "n" not in _navy_cache:
+        img = Image.new("RGB", (FW, FH))
+        d = ImageDraw.Draw(img)
+        for y in range(FH):
+            k = 1 - abs(y - FH * 0.5) / (FH * 0.5)
+            d.line([(0, y), (FW, y)], fill=tuple(int(lerp(a, b, k ** 1.2)) for a, b in zip((5, 9, 24), (29, 60, 118))))
+        pat = Image.new("RGBA", (FW, FH), (0, 0, 0, 0))
+        pd = ImageDraw.Draw(pat)
+        step = 36
+        for yy in range(-step, FH + step, step):
+            for xx in range(-step, FW + step, step):
+                if ((xx // step) + (yy // step)) % 2:
+                    pd.polygon([(xx, yy - step / 2), (xx + step / 2, yy), (xx, yy + step / 2), (xx - step / 2, yy)], fill=(255, 255, 255, 10))
+        img = img.convert("RGBA")
+        img.alpha_composite(pat)
+        glow(img, FW // 2, FH // 2, 420, (60, 110, 200), 0.25)
+        _navy_cache["n"] = img
+    return _navy_cache["n"].copy()
+
+
+def _lower_third_raw(img, title, sub, k):
+    if k <= 0.02:
+        return
+    d = ImageDraw.Draw(img)
+    w, h = 560 * min(1.0, k), 96
+    x0, y0 = 360 - w / 2, 1100
+    d.rounded_rectangle([x0, y0, x0 + w, y0 + h], 16, fill=(10, 14, 32), outline=C_Y, width=5)
+    if k > 0.6:
+        d.text((360, y0 + 32), title, font=font(800, 28), fill=C_Y, anchor="mm")
+        d.text((360, y0 + 68), sub, font=font(700, 22), fill=(240, 240, 245), anchor="mm")
+
+
+def lower_third(img, title, sub, k=1.0):
+    DEFER.append(lambda im: _lower_third_raw(im, title, sub, k))
+
+
+_training_prev = s_training
+
+
+def s_training(t, u, T):
+    img = _training_prev(t, u, T)
+    lower_third(img, "MONDAY · TRAINING", "SHOT-STOPPING", spring(t - T - 0.2, 13, 7))
+    return img
+
+
+_crosses_prev = s_crosses
+
+
+def s_crosses(t, u, T):
+    img = _crosses_prev(t, u, T)
+    lower_third(img, "TUESDAY · TRAINING", "CROSSES & HEADERS", spring(t - T - 0.2, 13, 7))
+    return img
+
+
+def _card_img(kind, t):
+    """small pixel picture inside a choice card: the keeper diving left or right"""
+    pic = Image.new("RGBA", (260, 230), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(pic)
+    for y in range(230):
+        pd.line([(0, y), (260, y)], fill=(36, 132, 60) if (y // 20) % 2 else (42, 150, 72))
+    pd.rectangle([20, 40, 240, 150], outline=(250, 250, 252), width=6)
+    for x in range(26, 240, 18):
+        pd.line([(x, 44), (x, 148)], fill=(220, 230, 235), width=1)
+    side = -1 if kind == "LEFT" else 1
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), 4).rotate(-90 if side > 0 else 90, expand=True, resample=Image.NEAREST)
+    pic.alpha_composite(sp, (int(130 + side * 40 - sp.width / 2), int(100 - sp.height / 2)))
+    draw_ball(pic, 130 + side * 95, 70, 1.6)
+    return pic
+
+
+def s_end(t, u, T):
+    """reference ending: navy, comment field typing, two option cards, then FOLLOW"""
+    img = navy_bg()
+    d = ImageDraw.Draw(img)
+    # comment field
+    d.rounded_rectangle([90, 330, 630, 396], 30, fill=(12, 16, 40), outline=(230, 232, 245), width=4)
+    word = "LEFT" if int((t - T) / 1.2) % 2 == 0 else "RIGHT"
+    n = int(len(word) * clamp(((t - T) % 1.2) / 0.6))
+    d.text((122, 363), word[:n] + ("|" if int(t * 4) % 2 else ""), font=font(800, 30), fill=C_Y, anchor="lm")
+    for i, (x, lab, col, sub) in enumerate(((200, "LEFT", C_Y, "HE CHANGES SIDE"), (520, "RIGHT", (60, 210, 190), "HE GOES RIGHT AGAIN"))):
+        k = spring(t - T - i * 0.12, 13, 7)
+        if k < 0.05:
+            continue
+        w, h = 280 * k, 330 * k
+        y = 640
+        d.rounded_rectangle([x - w / 2, y - h / 2, x + w / 2, y + h / 2], 18, fill=(14, 20, 50), outline=col, width=6)
+        if k > 0.7:
+            img.alpha_composite(_card_img(lab, t), (x - 130, y - 150))
+            d = ImageDraw.Draw(img)
+            d.text((x, y + 120), lab, font=font(800, 44), fill=col, anchor="mm", stroke_width=3, stroke_fill=OL)
+            d.text((x, y + 190), sub, font=font(700, 18), fill=(200, 205, 225), anchor="mm")
+    # follow / subscribe button
+    tap = T + 1.0
+    after = t > tap
+    label = ("SUBSCRIBED" if after else "SUBSCRIBE") if PLATFORM == "youtube" else ("FOLLOWING" if after else "+ FOLLOW")
+    bw, bh = 320, 84
+    by = 1010
+    d.rounded_rectangle([360 - bw / 2, by - bh / 2, 360 + bw / 2, by + bh / 2], 20, fill=(60, 64, 90) if after else (234, 46, 72), outline=OL, width=4)
+    d.text((360, by), label, font=font(800, 34), fill=(255, 255, 255), anchor="mm")
+    if after and t < tap + 0.5:
+        glow_ring(img, 360, by, 60 + 260 * (t - tap), 0.8 * (1 - (t - tap) / 0.5), C_Y)
+    if t < tap + 0.35:
+        gx = lerp(760, 470, ease_in_out((t - T) / 1.0)); gy = by - 10 + 40 * (1 - ease_in_out((t - T) / 1.0))
+        d.rounded_rectangle([gx - 36, gy, gx + 36, gy + 82], 16, fill=(252, 140, 27), outline=OL, width=5)
+        d.rounded_rectangle([gx - 11, gy - 36, gx + 11, gy + 18], 9, fill=(252, 140, 27), outline=OL, width=5)
+        d.rectangle([gx - 36, gy + 82, gx + 36, gy + 94], fill=(225, 30, 40), outline=OL, width=3)
+    return img
+
+
 from PIL import ImageEnhance
 
 
 def grade(img):
     """muted reference look: less saturation, slightly softer contrast, warm evening tint"""
-    img = ImageEnhance.Color(img).enhance(0.9)
+    img = ImageEnhance.Color(img).enhance(1.0)
     img = Image.blend(img, Image.new("RGB", img.size, (60, 50, 70)), 0.04)
     w, h = img.size                                     # uniform pixel grid over EVERYTHING (reference look)
     return img.resize((w // 3, h // 3), Image.NEAREST).resize((w, h), Image.NEAREST)   # crisp, no smearing

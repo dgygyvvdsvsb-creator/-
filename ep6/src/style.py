@@ -553,7 +553,7 @@ def font(w, s):
 
 
 C_W, C_Y, C_R, C_B, C_G, C_O = (250, 250, 250), (250, 206, 40), (240, 80, 80), (92, 196, 252), (110, 222, 120), (252, 150, 40)
-C_DIM = (205, 208, 220)
+C_DIM = (150, 156, 175)
 
 
 def banner(img, ep):
@@ -584,7 +584,7 @@ def caption(img, words, t, wrap=600, y=108, size=50):
         tot = sum(ww for _, ww in ln) + sp * (len(ln) - 1)
         x = (FW - tot) / 2
         for (txt, st, col), ww in ln:
-            d.text((x, y), txt, font=f, fill=col if t >= st else C_DIM, stroke_width=8, stroke_fill=OL)
+            d.text((x, y), txt, font=f, fill=col if t >= st else C_DIM, stroke_width=5, stroke_fill=OL)
             x += ww + sp
         y += size + 6
 
