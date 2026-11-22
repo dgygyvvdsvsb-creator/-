@@ -192,13 +192,23 @@ def vhs(img, t, strength=1.0):
     img.alpha_composite(_c["scan"])
     # a rolling tracking band + sparse noise
     rng = random.Random(int(t * 15))
-    d = ImageDraw.Draw(img, "RGBA")
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
     by = (t * 260) % (FH + 200) - 100
     d.rectangle([0, by, FW, by + 26], fill=(255, 255, 255, int(22 * strength)))
     for _ in range(int(40 * strength)):
         x, y = rng.uniform(0, FW), rng.uniform(0, FH)
         d.line([(x, y), (x + rng.uniform(6, 30), y)], fill=(255, 255, 255, 60), width=1)
+    img.alpha_composite(ov)
     return img
+
+
+def tint(img, box, rgba, ellipse=False):
+    """semi-transparent shape composited properly (ImageDraw on RGBA would overwrite alpha)"""
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(ov)
+    (d.ellipse if ellipse else d.rectangle)(box, fill=rgba)
+    img.alpha_composite(ov)
 
 
 def vhs_osd(img, t, text="MAY 14 1984", play=True):
