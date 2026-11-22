@@ -234,7 +234,7 @@ def person(lk, view="front", pose="stand", mouth="flat", eyes="open", step=0):
 
 
 def big(s, k):
-    return s.resize((s.width * k, s.height * k), Image.NEAREST)
+    return s.resize((int(round(s.width * k)), int(round(s.height * k))), Image.NEAREST)
 
 
 # ------------------------------------------------------------------ the cast (series anchors kept)
