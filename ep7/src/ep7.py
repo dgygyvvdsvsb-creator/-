@@ -154,7 +154,7 @@ def watchers(img, c, t):
         bob = 0.05 * abs(math.sin(t * 3.1 + i))
         nerv = math.sin(t * 1.2 + i * 2.3)
         pose = "celebrate" if nerv > 0.8 else ("ready" if nerv < -0.7 else "stand")
-        goal_t = STARTS[2] + 0.5 * D(2)
+        goal_t = STARTS[2] + 0.91 * D(2)        # the ball crosses the line
         if t > goal_t:                       # the result lands: winners jump, losers freeze
             won = (team == "res") == RIGHT
             pose = "celebrate" if won else "stand"
@@ -186,7 +186,7 @@ def taker_and_ball(img, c, t, run=None, kick=None, after=None):
     phase = dist / stride
     bob = abs(math.sin(phase * math.pi * 2)) * 0.07
     if after is not None:                       # after the strike: foot down, then (goal) arms up
-        pose, ph = ("celebrate" if (RIGHT and after > 0.35) else "stand"), 0.0
+        pose, ph = ("celebrate" if (RIGHT and after > 0.8) else "stand"), 0.0
         bob = 0.25 * abs(math.sin(t * 7)) if pose == "celebrate" else 0.0
     elif kick is not None:
         pose, ph = "strikeF", kick
