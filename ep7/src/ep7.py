@@ -406,15 +406,13 @@ def s_mason(t, u, T):
 def s_message(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
     phone_ui(img, 330, 820, "msg", t)
-    k = spring(t - T - 0.2, 13, 7)
-    if k > 0.05:      # the text bubble from GRANDAD
-        d = ImageDraw.Draw(img)
-        w, h = 330 * min(1.05, k), 120 * min(1.05, k)
-        x0, y0 = 330 - w / 2, 960 - h / 2
-        d.rounded_rectangle([x0, y0, x0 + w, y0 + h], 26, fill=(250, 250, 252), outline=OL, width=5)
-        if k > 0.6:
-            d.text((330, 940), "Stay away", font=font(800, 34), fill=(200, 40, 50), anchor="mm")
-            d.text((330, 984), "from him.", font=font(800, 34), fill=(200, 40, 50), anchor="mm")
+    n = int(clamp((t - T - 0.25) / 0.9) * 19)     # the message types itself on the screen (no bubble)
+    msg = "STAY AWAY FROM HIM."
+    d = ImageDraw.Draw(img)
+    l1, l2 = msg[:10], msg[10:]
+    d.text((330, 950), l1[:n], font=font(800, 40), fill=(255, 90, 90), anchor="mm", stroke_width=3, stroke_fill=OL)
+    if n > 10:
+        d.text((330, 1000), l2[:n - 10], font=font(800, 40), fill=(255, 90, 90), anchor="mm", stroke_width=3, stroke_fill=OL)
     vignette(img, 0.5)
     return cam(img, 1.0 + 0.12 * ease_in_out(u), 360, 900)
 
@@ -441,9 +439,8 @@ def choice_cards(img, t, T0):
             else:
                 d.rounded_rectangle([x - 60, y - 190, x + 60, y + 20], 18, fill=(24, 26, 36), outline=OL, width=5)  # phone
                 d.rounded_rectangle([x - 48, y - 176, x + 48, y + 6], 12, fill=(20, 30, 60))
-                d.rounded_rectangle([x - 44, y - 120, x + 44, y - 60], 10, fill=(250, 250, 252))
-                d.text((x, y - 98), "Stay away", font=font(800, 14), fill=(200, 40, 50), anchor="mm")
-                d.text((x, y - 80), "from him.", font=font(800, 14), fill=(200, 40, 50), anchor="mm")
+                d.text((x, y - 98), "STAY AWAY", font=font(800, 15), fill=(255, 90, 90), anchor="mm")
+                d.text((x, y - 78), "FROM HIM.", font=font(800, 15), fill=(255, 90, 90), anchor="mm")
             d = ImageDraw.Draw(img)
             d.text((x, y + 110), lab, font=font(800, 31), fill=c, anchor="mm", stroke_width=4, stroke_fill=OL)
             d.text((x, y + 160), sub, font=font(700, 17), fill=(220, 224, 240), anchor="mm")
