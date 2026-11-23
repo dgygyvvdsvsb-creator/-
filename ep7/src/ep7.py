@@ -169,8 +169,10 @@ def run_progress(t):
     """continuous across lines 0-2: real speed in the hook, slow motion on the vote card, last steps + kick"""
     s1, s2 = STARTS[1], STARTS[2]
     kick_t = s2 + 0.18 * D(2)
+    if t < COLD:
+        return 0.0
     if t < s1:
-        return 0.62 * (t / s1)
+        return 0.62 * ((t - COLD) / (s1 - COLD))
     if t < s2:
         return 0.62 + 0.18 * ((t - s1) / (s2 - s1))           # slow motion
     return min(1.0, 0.80 + 0.20 * ease_out((t - s2) / (kick_t - s2)))
@@ -200,7 +202,47 @@ def taker_and_ball(img, c, t, run=None, kick=None, after=None):
     sprite_at(img, c, sp, X, Z, Y=bob, height_m=1.6)
 
 
+COLD = 0.95          # cold open: the frozen dive (TikTok preview), then rewind to the run-up
+
+
+def s_cold(t):
+    """frame 0: you, frozen at full stretch in the air — low tilted angle, floodlight glare, the stand a blur"""
+    c = Cam(camX=0.0, camH=0.45, hor=820)
+    img = backdrop(820, stadium=True)
+    pitch_persp(img, c, Zgoal=7.0, box=False)
+    goal3d(img, c, 7.0, w=5.0, h=2.0)
+    img = img.filter(ImageFilter.GaussianBlur(3))
+    glow(img, 560, 300, 260, (255, 236, 170), 0.6)
+    k = clamp(t / COLD)
+    # radial speed lines from the keeper
+    cx, cy = 390, 700
+    speed_lines(img, t, cx, cy, n=26, a=120, r0=300, r1=700)
+    # YOU: front view, arms stretched, flying to your right (screen left from this side), big
+    sp = big(hero(pose="reach", gloves=True, mouth="open"), 15).rotate(72, expand=True, resample=Image.NEAREST)
+    x = cx - sp.width / 2 - 40 * k
+    y = cy - sp.height / 2 - 20 * k
+    img.alpha_composite(sp, (int(x), int(y)))
+    glow_ring(img, 155 - 40 * k, 600 - 20 * k, 105 + 8 * math.sin(t * 20), 0.6, (255, 230, 170))   # the gloves
+    # the ball: in flight, high on the other side, a hard motion blur — where is it going?
+    bx, by = 585 + 25 * k, 520 + 10 * k
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(ov)
+    for j in range(5):
+        od.line([(bx + 10 + j * 4, by - 18 + j * 9), (bx + 150 + j * 10, by + 70 + j * 9)], fill=(255, 255, 255, 140 - j * 22), width=7)
+    img.alpha_composite(ov.filter(ImageFilter.GaussianBlur(2)))
+    draw_ball(img, bx, by + 40, 3.4)
+    shadow(img, 300, 1150, 420, 60, 90)
+    slowmo_bars(img, 1.0)
+    vignette(img, 0.45)
+    img = cam(img, 1.16 + 0.04 * k, 360, 700, rot=-7)
+    if t > COLD - 0.12:                                  # rewind cut
+        img = flash(img, (t - (COLD - 0.12)) / 0.12 * 0.8)
+    return img
+
+
 def s_hook(t, u, T):
+    if t < COLD:
+        return s_cold(t)
     img, c = keeper_set(t)
     watchers(img, c, t)                                     # far first, then the taker, then the ball
     taker_and_ball(img, c, t)
