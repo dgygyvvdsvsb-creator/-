@@ -715,8 +715,9 @@ def s_stretcher(t, u, T):
     d = ImageDraw.Draw(img)
     d.rectangle([sx0, sy - 30, sx1, sy], fill=(230, 226, 210), outline=OL, width=4)                 # canvas
     sp = big(young_grandad(pose="stand", blink=True, mouth="flat"), 10).rotate(90, expand=True, resample=Image.NEAREST)
-    img.alpha_composite(sp, (int(sx0 + 10), int(sy - sp.height + 64)))
+    img.alpha_composite(sp, (int(sx0 + 10), int(sy - sp.height + 40)))
     d = ImageDraw.Draw(img)
+    d.rectangle([sx0, sy - 14, sx1, sy], fill=(230, 226, 210), outline=OL, width=4)               # the canvas bed under him
     d.rectangle([x0 - 10, sy - 6, x0 + 570, sy + 6], fill=(150, 150, 160), outline=OL, width=3)     # poles, end to end
     for hx_ in (x0, x0 + 560):                                                                     # fists on the handles
         d.rounded_rectangle([hx_ - 22, sy - 14, hx_ + 22, sy + 14], 6, fill=SKIN["light"][0], outline=OL, width=3)

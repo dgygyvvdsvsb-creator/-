@@ -223,7 +223,7 @@ def s_result(t, u, T):
         bx, by = c.p(1.8, 9.9, 0.3)
         draw_ball(img, bx, by + 10, 1.0)
         impact_lines(img, bx, by, T, t, 12)
-        for k, (X, Z) in enumerate(((0.0, 6.2), (-0.7, 7.2), (0.6, 7.6), (0.3, 5.4))):    # the reserves celebrate
+        for k, (X, Z) in enumerate(((-0.3, 5.3), (-0.8, 7.2), (0.6, 7.6), (0.4, 6.6))):    # the reserves celebrate
             ground_shadow(img, c, X, Z, 0.35)
             sprite_at(img, c, res((10, 5, 7, 4)[k], pose="celebrate", mouth="grin"), X + math.sin(t * 6 + k) * 0.1, Z,
                       Y=abs(math.sin(t * 7 + k)) * 0.25, height_m=1.6)
@@ -364,20 +364,20 @@ def phone_ui(img, cx, cy, state, t, k=1.0):
 
 def s_night(t, u, T):
     img = dorm_night(t)
-    paste(img, hero(pose="phone", mouth="flat"), 11, 200, 1200)
-    phone_ui(img, 470, 820, "calling" if u < 0.6 else "talk", t, spring(t - T - 0.2, 13, 7))
+    paste(img, hero(pose="phone", mouth="flat"), 11, 120, 1200)
+    phone_ui(img, 400, 820, "calling" if u < 0.6 else "talk", t, 0.9 * spring(t - T - 0.2, 13, 7))
     return cam(img, 1.0 + 0.04 * u, 360, 760)
 
 
 def s_ask(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
-    phone_ui(img, 360, 820, "talk", t)
+    phone_ui(img, 330, 820, "talk", t)
     return cam(img, 1.0 + 0.15 * ease_in_out(u), 360, 760)
 
 
 def s_hangup(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
-    phone_ui(img, 360, 820, "silent" if u < 0.62 else "ended", t)
+    phone_ui(img, 330, 820, "silent" if u < 0.62 else "ended", t)
     if u > 0.62:
         img = flash(img, 0.3 * clamp(1 - (u - 0.62) * 8), (255, 60, 60))
     vignette(img, 0.3 + 0.3 * u)
@@ -399,16 +399,16 @@ def s_mason(t, u, T):
 
 def s_message(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
-    phone_ui(img, 360, 820, "msg", t)
+    phone_ui(img, 330, 820, "msg", t)
     k = spring(t - T - 0.2, 13, 7)
     if k > 0.05:      # the text bubble from GRANDAD
         d = ImageDraw.Draw(img)
         w, h = 330 * min(1.05, k), 120 * min(1.05, k)
-        x0, y0 = 360 - w / 2, 960 - h / 2
+        x0, y0 = 330 - w / 2, 960 - h / 2
         d.rounded_rectangle([x0, y0, x0 + w, y0 + h], 26, fill=(250, 250, 252), outline=OL, width=5)
         if k > 0.6:
-            d.text((360, 940), "Stay away", font=font(800, 34), fill=(200, 40, 50), anchor="mm")
-            d.text((360, 984), "from him.", font=font(800, 34), fill=(200, 40, 50), anchor="mm")
+            d.text((330, 940), "Stay away", font=font(800, 34), fill=(200, 40, 50), anchor="mm")
+            d.text((330, 984), "from him.", font=font(800, 34), fill=(200, 40, 50), anchor="mm")
     vignette(img, 0.5)
     return cam(img, 1.0 + 0.12 * ease_in_out(u), 360, 900)
 
@@ -445,7 +445,7 @@ def choice_cards(img, t, T0):
 
 def typing_box(img, t, T0):
     d = ImageDraw.Draw(img)
-    y = 980 + UY * 0.4
+    y = 930 + UY * 0.4
     d.rounded_rectangle([50, y, 590, y + 70], 18, fill=(16, 18, 36), outline=(255, 255, 255), width=3)
     words = ["ASK COACH", "STAY AWAY"]
     k = (t - T0) / 1.1
@@ -484,7 +484,7 @@ def s_end(t, u, T):
     if after and t < tap + 0.5:
         glow_ring(img, bx, by, 60 + 300 * (t - tap), 0.8 * (1 - (t - tap) / 0.5), C_Y)
     if t < tap + 0.4:
-        gx = lerp(600, bx + 100, ease_in_out((t - T) / 0.8)); gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
+        gx = lerp(540, bx + 90, ease_in_out((t - T) / 0.8)); gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
         d.rounded_rectangle([gx - 40, gy, gx + 40, gy + 90], 18, fill=(252, 140, 27), outline=OL, width=5)
         d.rounded_rectangle([gx - 12, gy - 40, gx + 12, gy + 20], 10, fill=(252, 140, 27), outline=OL, width=5)
         d.rectangle([gx - 40, gy + 90, gx + 40, gy + 104], fill=(225, 30, 40), outline=OL, width=3)
