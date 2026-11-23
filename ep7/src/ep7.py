@@ -118,6 +118,17 @@ def shoot_bar(img, res_win=False):
            fill=(255, 255, 255) if not res_win else (140, 200, 255), anchor="mm")
 
 
+def posts_fg(img):
+    """we stand on the goal line: the two posts frame the shot, so LEFT and RIGHT corners are on screen"""
+    d = ImageDraw.Draw(img)
+    for x in (34, 686):
+        d.rectangle([x - 22, 380, x + 22, FH], fill=OL)
+        d.rectangle([x - 16, 380, x + 16, FH], fill=(250, 250, 252))
+        d.rectangle([x + 4, 380, x + 16, FH], fill=(220, 224, 232))
+    d.rectangle([0, 360, FW, 402], fill=OL)
+    d.rectangle([0, 366, FW, 396], fill=(250, 250, 252))
+
+
 def keeper_set(t):
     c = Cam(camX=0.0, camH=1.9, hor=520)
     img = backdrop(520, stadium=True)
@@ -154,7 +165,7 @@ def watchers(img, c, t):
         bob = 0.05 * abs(math.sin(t * 3.1 + i))
         nerv = math.sin(t * 1.2 + i * 2.3)
         pose = "celebrate" if nerv > 0.8 else ("ready" if nerv < -0.7 else "stand")
-        goal_t = STARTS[2] + 0.91 * D(2)        # the ball crosses the line
+        goal_t = STARTS[3]                      # the ball crosses the line at the cut
         if t > goal_t:                       # the result lands: winners jump, losers freeze
             won = (team == "res") == RIGHT
             pose = "celebrate" if won else "stand"
@@ -168,14 +179,14 @@ def watchers(img, c, t):
 def run_progress(t):
     """continuous across lines 0-2: real speed in the hook, slow motion on the vote card, last steps + kick"""
     s1, s2 = STARTS[1], STARTS[2]
-    kick_t = s2 + 0.18 * D(2)
-    if t < COLD:
+    kick_t = s2 + 0.3 * D(2)
+    if t < COLD + 0.45:
         return 0.0
     if t < s1:
-        return 0.62 * ((t - COLD) / (s1 - COLD))
+        return 0.62 * ((t - COLD - 0.45) / (s1 - COLD - 0.45))
     if t < s2:
-        return 0.62 + 0.18 * ((t - s1) / (s2 - s1))           # slow motion
-    return min(1.0, 0.80 + 0.20 * ease_out((t - s2) / (kick_t - s2)))
+        return 0.62 + 0.24 * ((t - s1) / (s2 - s1))           # slow motion
+    return min(1.0, 0.86 + 0.14 * ease_out((t - s2) / max(0.01, kick_t - s2)))
 
 
 def taker_and_ball(img, c, t, run=None, kick=None, after=None):
@@ -186,13 +197,14 @@ def taker_and_ball(img, c, t, run=None, kick=None, after=None):
     phase = dist / stride
     bob = abs(math.sin(phase * math.pi * 2)) * 0.07
     if after is not None:                       # after the strike: foot down, then (goal) arms up
-        pose, ph = ("celebrate" if (RIGHT and after > 0.8) else "stand"), 0.0
-        bob = 0.25 * abs(math.sin(t * 7)) if pose == "celebrate" else 0.0
+        pose, ph = "stand", 0.0                    # he watches it roll in; the celebration is in the next shot
+        bob = 0.02 * abs(math.sin(t * 3))
     elif kick is not None:
         pose, ph = "strikeF", kick
         bob = 0.1 * math.sin(clamp((kick - 0.55) / 0.45) * math.pi) if kick > 0.55 else 0.0   # little hop after the strike
     elif p >= 0.999:
         pose, ph = "stand", 0.0
+        bob = 0.02 * abs(math.sin(t * 3))
     else:
         pose, ph = "run", phase
     ground_shadow(img, c, X, Z, 0.4)
@@ -211,7 +223,7 @@ def s_cold(t):
     img, c = keeper_set(t)
     watchers(img, c, t)
     ground_shadow(img, c, 0.3, 8.45, 0.4)
-    sprite_at(img, c, res(10, pose="strikeF", phase=0.2, mouth="flat"), 0.3, 8.45, height_m=1.6)   # backswing, ball untouched
+    sprite_at(img, c, res(10, pose="strikeF", phase=0.34, mouth="flat"), 0.3, 8.45, height_m=1.6)  # backswing, ball untouched
     ball_at(img, c, 0.0, 7.6, 0.0)
     k = clamp(t / COLD)
     f = 0.55 + 0.05 * k                                   # frozen high in the dive, drifting a little
@@ -235,6 +247,7 @@ def s_cold(t):
         rr = rng.uniform(5, 11)
         dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=(120, 90, 60) if rng.random() < 0.5 else (70, 140, 70))
     glow_ring(img, *c.p(0.0, 7.6, 0.1), 50 + 6 * math.sin(t * 18), 0.8, (255, 230, 150))   # the ball: not even kicked yet
+    posts_fg(img)
     slowmo_bars(img, 1.0)
     shoot_bar(img)
     img = cam(img, 1.08 + 0.04 * k, 400, 820)
@@ -243,14 +256,38 @@ def s_cold(t):
     return img
 
 
+REWIND = 0.45
+
+
 def s_hook(t, u, T):
     if t < COLD:
         return s_cold(t)
     img, c = keeper_set(t)
-    watchers(img, c, t)                                     # far first, then the taker, then the ball
+    watchers(img, c, t)
+    if t < COLD + REWIND:                       # rewind: everything slides back, #10 reverses to his mark
+        r = (t - COLD) / REWIND
+        f = 0.6 * (1 - ease_in_out(r))
+        p = 1.0 - ease_in_out(r)
+        (X, Z), _ = _path(p)
+        ground_shadow(img, c, X, Z, 0.4)
+        sprite_at(img, c, res(10, pose="run", phase=-t * 6), X, Z, height_m=1.6)
+        ball_at(img, c, 0.0, 7.6, 0.0)
+        kx = 330 + 250 * f
+        ky = 1430 - 300 * math.sin(f * math.pi * 0.85)
+        sp = big(hero(view="back", pose="reach" if f > 0.1 else "ready", gloves=True), 13).rotate(-85 * min(1.0, f * 1.4), expand=True, resample=Image.NEAREST)
+        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
+        posts_fg(img)
+        shoot_bar(img)
+        img = cam(img, 1.08, 380, 840)
+        img = vhs(img, t, 1.4)
+        d = ImageDraw.Draw(img)
+        for xo in (0, 46):
+            d.polygon([(330 + xo, 640), (380 + xo, 610), (380 + xo, 670)], fill=(255, 255, 255))
+        return img
     taker_and_ball(img, c, t)
     ball_at(img, c, 0.0, 7.6, 0.0)
     paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - abs(math.sin(t * 5)) * 6)
+    posts_fg(img)
     shoot_bar(img)
     return cam(img, 1.12 + 0.06 * clamp(t / D(0)), 360, 900)
 
@@ -275,7 +312,8 @@ def s_vote(t, u, T):
     side = 1 if RIGHT else -1          # the hero's right = screen right (we see his back)
     arrow_on_grass(img, side, clamp((u - 0.1) / 0.4), C_B if RIGHT else C_Y, "RIGHT" if RIGHT else "LEFT",
                    (40, 110, 200) if RIGHT else (200, 160, 20), t, T + 0.5 * D(1))
-    paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430)
+    paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - 6 * abs(math.sin(t * 5)))
+    posts_fg(img)
     pill(img, 150, 700, "YOU VOTED", (40, 150, 80), spring(t - T - 0.1, 13, 7), 30)
     shoot_bar(img)
     return cam(img, 1.04 + 0.04 * u, 360, 800)
@@ -385,13 +423,13 @@ def net_impact(t, v, t_hit):
     img = backdrop(600, stadium=True)
     pitch_persp(img, c, None)
     s = 1.6 * c.k(3.6) / 31
-    sp = hero(view="back", pose="reach", gloves=True).resize((int(24 * s), int(39 * s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
-    x, y = c.p(1.1, 3.6)                                    # you, on the grass (your right = screen right from in here)
+    sp = hero(view="back", pose="reach", gloves=True).resize((int(24 * s), int(39 * s)), Image.NEAREST).rotate(-90, expand=True, resample=Image.NEAREST)
+    x, y = c.p(1.3, 3.6)                                    # you, on the grass (your right = screen right from in here)
     img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * s)))
     img = img.filter(ImageFilter.GaussianBlur(2))
     hit = 0.35
     a = clamp(v / hit)
-    bx, by = lerp(420, 330, a), lerp(760, 700, a)
+    bx, by = lerp(320, 190, a), lerp(760, 720, a)
     bul = 0.0 if v < hit else math.exp(-(v - hit) * 5) * (1 + 0.3 * math.sin((v - hit) * 40))
     if v < hit:
         draw_ball(img, bx, by, lerp(1.0, 7.0, a ** 2))
@@ -425,84 +463,131 @@ def taker_face(t, v, T):
     img = backdrop(560, stadium=True).filter(ImageFilter.GaussianBlur(6))
     d = ImageDraw.Draw(img)
     d.rectangle([0, 560, FW, FH], fill=(78, 140, 76))
-    look = 1 if v > 0.3 else 0
-    sp = res(10, look=look, mouth="smile" if v > 0.55 else "flat", blink=False)
-    paste(img, sp, 30, 360, 1400)
-    if v > 0.3:                                   # a glint in the eye that looks right
-        glow_ring(img, 435, 620, 34 + 8 * math.sin(t * 20), 0.75, (255, 255, 220))
+    turn = clamp((v - 0.25) / 0.2)
+    sp = res(10, mouth="smile" if v > 0.55 else "flat", blink=False)
+    sp = sp.rotate(-5 * turn, resample=Image.NEAREST, expand=False)
+    S = 30
+    top = 1400 - 39 * S
+    paste(img, sp, S, 360 + 12 * turn, 1400)
+    d = ImageDraw.Draw(img)
+    for ex in (6, 10):                            # redraw the eyes: whites 2 px wide, pupils pushed to screen right
+        x0 = 360 + 12 * turn - 12 * S + (3 + ex) * S
+        y0 = top + (10 + 3) * S
+        d.rectangle([x0, y0, x0 + 2 * S - 1, y0 + 2 * S - 1], fill=(250, 250, 250))
+        px = x0 + (S if turn > 0.5 else S // 2)
+        d.rectangle([px, y0, px + S - 1, y0 + 2 * S - 1], fill=OL)
+    if turn > 0.5:
+        glow_ring(img, 360 + 12 * turn - 12 * S + (3 + 11) * S + S // 2, top + 14 * S, 34 + 8 * math.sin(t * 20), 0.75, (255, 255, 220))
     vignette(img, 0.5)
     return cam(img, 1.0 + 0.12 * v, 400, 800)
 
 
+def strike_insert(t, v, T, t_contact):
+    c2 = Cam(camX=0.0, camH=0.5, hor=640)
+    img = backdrop(640, stadium=True)
+    pitch_persp(img, c2, None)
+    ph = clamp(v)
+    shadow(img, 360, 1150, 300, 50, 100)
+    hop = 30 * math.sin(clamp((ph - 0.55) / 0.45) * math.pi) if ph > 0.55 else 0
+    paste(img, res(10, pose="strikeF", phase=ph, mouth="flat"), 17, 360, 1160 - hop)
+    contact = 0.45
+    if ph < contact:
+        draw_ball(img, 330, 1150, 4.0)
+    else:                                         # calm side-foot: it rolls away low to screen RIGHT (= your LEFT from behind you)
+        w_ = (ph - contact) / (1 - contact)
+        draw_ball(img, lerp(330, 560, w_), lerp(1150, 1170, w_), lerp(4.0, 4.6, w_))
+        impact_lines(img, 330, 1110, t_contact, t, 12)
+    shoot_bar(img)
+    slowmo_bars(img, 1.0 if 0.35 < ph < 0.6 else 0.0)
+    return cam(img, 1.0, 360, 800, *shake(t, t_contact, .15, 6))
+
+
 def s_kick(t, u, T):
-    """he baits you: a glance to your right, you go early — he rolls it calmly into the other corner"""
-    if u < 0.16:
-        return taker_face(t, u / 0.16, T)
+    """he baits you: a glance to your right, you go early — then he rolls it calmly into the other corner"""
+    G0, GO, K0, K1 = 0.16, 0.16, 0.30, 0.44      # glance | you commit | strike close-up | back to your view
+    if u < G0:
+        return taker_face(t, u / G0, T)
+    if K0 <= u < K1:
+        return strike_insert(t, (u - K0) / (K1 - K0), T, T + (K0 + 0.45 * (K1 - K0)) * D(2))
     img, c = keeper_set(t)
     watchers(img, c, t)
-    kick = 0.36                                   # he waits for you to commit, THEN strikes
-    kp = (u - kick + 0.15) / 0.33
-    if kp >= 1.0:
-        taker_and_ball(img, c, t, after=clamp((u - kick - 0.18) / (1 - kick - 0.18)))
+    if u < K0:                                   # he is still arriving at the ball
+        taker_and_ball(img, c, t)
     else:
-        taker_and_ball(img, c, t, kick=clamp(kp) if u > kick - 0.15 else None)
+        taker_and_ball(img, c, t, after=clamp((u - K1) / (1 - K1)))
     side = 1 if RIGHT else -1
-    go = 0.24                                     # you commit BEFORE the strike
-    dv = clamp((u - go) / 0.16)                   # explosive and fast: ~0.45 s in the air
-    land = clamp((u - go - 0.16) / 0.08)
-    if u < go:
-        paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - 10 * math.sin(u * 30))
+    dv = clamp((u - GO) / 0.12)                  # explosive: you are in the air in ~0.35 s
+    f = ease_out(dv)
+    landed = u >= K1
+    if landed:
+        f = 1.0
+    kx = 330 + side * 250 * f
+    ky = 1430 - (300 * math.sin(f * math.pi * 0.85) if not landed else 0) - (0 if not landed else -60) + (60 if landed else 0) * 0
+    if landed:
+        ky = 1430 - 300 * math.sin(math.pi * 0.85) + 60
+    if dv <= 0:
+        paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430)
     else:
-        f = ease_out(dv)
-        kx = 330 + side * 250 * f
-        ky = 1430 - 300 * math.sin(f * math.pi * 0.85) + 60 * land
-        rot = -side * (85 * min(1.0, f * 1.4))
-        # push-off dust and turf at the take-off spot
-        if dv < 0.6:
+        if dv < 0.7:                              # push-off: turf and dust
             dd = ImageDraw.Draw(img)
             rng = random.Random(9)
             for _ in range(22):
                 ang = rng.uniform(math.pi * 0.9, math.pi * 1.9)
-                r_ = rng.uniform(40, 220) * ease_out(dv / 0.6)
-                px, py = 330 + math.cos(ang) * r_ * 1.3, 1300 + math.sin(ang) * r_ * 0.6 + 200 * (dv / 0.6) ** 2
-                col = (120, 90, 60) if rng.random() < 0.5 else (70, 140, 70)
-                rr = rng.uniform(5, 12) * (1 - dv / 0.6)
-                dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=col)
-        # afterimages: a shiver of ghosts behind the flying body
-        for g, ga in ((0.18, 0.18), (0.1, 0.32)):
-            fg = ease_out(clamp((u - go - g * 0.16) / 0.16))
-            if fg <= 0 or f >= 0.999:
-                continue
-            ghost = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-side * 85 * min(1.0, fg * 1.4), expand=True, resample=Image.NEAREST)
-            gx, gy = 330 + side * 250 * fg, 1430 - 300 * math.sin(fg * math.pi * 0.85)
-            ghost.putalpha(ghost.split()[3].point(lambda a_: int(a_ * ga)))
-            img.alpha_composite(ghost, (int(gx - ghost.width / 2), int(gy - ghost.height)))
-        sp = big(hero(view="back", pose="reach", gloves=True), 13).rotate(rot, expand=True, resample=Image.NEAREST)
+                r_ = rng.uniform(40, 220) * ease_out(dv / 0.7)
+                px, py = 330 + math.cos(ang) * r_ * 1.3, 1300 + math.sin(ang) * r_ * 0.6 + 200 * (dv / 0.7) ** 2
+                rr = rng.uniform(5, 12) * (1 - dv / 0.7)
+                dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=(120, 90, 60) if rng.random() < 0.5 else (70, 140, 70))
+        if not landed:
+            for g, ga in ((0.2, 0.18), (0.1, 0.32)):  # afterimages
+                fg = ease_out(clamp(dv - g))
+                if fg <= 0:
+                    continue
+                ghost = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-side * 85 * min(1.0, fg * 1.4), expand=True, resample=Image.NEAREST)
+                ghost.putalpha(ghost.split()[3].point(lambda a_: int(a_ * ga)))
+                gx, gy = 330 + side * 250 * fg, 1430 - 300 * math.sin(fg * math.pi * 0.85)
+                img.alpha_composite(ghost, (int(gx - ghost.width / 2), int(gy - ghost.height)))
+        sp = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-side * 85 * min(1.0, f * 1.4), expand=True, resample=Image.NEAREST)
         img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
-        if 0.05 < dv < 1:                          # streaks behind him
-            dd = ImageDraw.Draw(img, "RGBA")
+        if 0.05 < dv < 1 and not landed:
+            dd = ImageDraw.Draw(img)
             for j in range(9):
                 yy = ky - sp.height * (0.2 + 0.07 * j)
                 dd.line([(kx - side * 120, yy), (kx - side * (260 + 30 * j), yy)], fill=(255, 255, 255), width=5)
-        if 0 < land < 1:                           # the landing: grass spray
-            impact_lines(img, kx, ky - 40, T + (go + 0.16) * D(2), t, 10)
-    # the ball: a calm, rolling side-foot into the empty LEFT corner (screen left)
-    if u < kick:
+    # the ball: after the strike it rolls slowly into the empty LEFT corner (screen left), growing as it comes
+    if u < K1:
         ball_at(img, c, 0.0, 7.6, 0.0)
     else:
-        a = clamp((u - kick) / 0.55)
+        a = clamp((u - K1) / (1 - K1))
         sx, sy = c.p(0.0, 7.6)
-        if RIGHT:
-            ex, ey = 70, 1180
-        else:
-            ex, ey = 330 - 300, 1050
+        ex, ey = 120, 1120
         bx, by = lerp(sx, ex, a), lerp(sy, ey, a)
-        shadow(img, bx, by + 6, 50 * lerp(1.0, 3.0, a), 12 * lerp(1.0, 3.0, a), 80)
-        draw_ball(img, bx, by, lerp(1.0, 3.4, a))
-        if a >= 1 and RIGHT:
-            img = flash(img, 0.4 * clamp(1 - (u - kick - 0.55) * 10), (255, 50, 50))
+        sz = lerp(1.15, 3.4, a)
+        shadow(img, bx, by + 6, 50 * sz / 1.15, 12 * sz / 1.15, 80)
+        draw_ball(img, bx, by, sz)
+    posts_fg(img)
     shoot_bar(img)
-    return cam(img, 1.04, 360, 820, *shake(t, T + (go + 0.16) * D(2), .25, 10))
+    return cam(img, 1.04, 360, 820, *shake(t, T + (GO + 0.12) * D(2), .25, 10))
+
+
+def top_down_you(t, v):
+    img = Image.new("RGBA", (FW, FH), (74, 138, 72, 255))
+    d = ImageDraw.Draw(img)
+    for k in range(10):
+        d.rectangle([0, k * 140, FW, k * 140 + 70], fill=(68, 130, 66))
+    d.rectangle([0, 380, FW, 396], fill=(240, 244, 236))                     # the goal line
+    for x in range(0, FW, 36):                                               # the net's shadow behind it
+        d.line([(x, 300), (x + 36, 380)], fill=(60, 110, 60), width=3)
+    sp = big(hero(pose="reach", gloves=True, blink=0.55 < v < 0.62, mouth="sad"), 15).rotate(-90, expand=True, resample=Image.NEAREST)
+    img.alpha_composite(sp, (int(360 - sp.width / 2 + 60), int(760 - sp.height / 2)))
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(ov)
+    for k in range(3):                                                       # shadows of the winners running past
+        x = lerp(-200, 900, (v * 1.3 + k * 0.35) % 1.3 / 1.3)
+        y = 560 + k * 180
+        od.ellipse([x - 90, y - 40, x + 90, y + 40], fill=(0, 0, 0, 90))
+    img.alpha_composite(ov.filter(ImageFilter.GaussianBlur(6)))
+    vignette(img, 0.45)
+    return cam(img, 1.0 + 0.12 * v, 400, 760)
 
 
 def s_result(t, u, T):
@@ -513,7 +598,7 @@ def s_result(t, u, T):
     goal3d(img, c, 9.0)
     s = 1.6 * c.k(9.0) / 31
     # from this side the hero's right is screen LEFT
-    kx_side = -1.7 if RIGHT else 1.7
+    kx_side = -1.4 if RIGHT else 1.4
     sp = hero(pose="reach", gloves=True, blink=RIGHT, mouth="sad" if RIGHT else "grin").resize((int(24 * s), int(39 * s)), Image.NEAREST)
     sp = sp.rotate(90 if RIGHT else -90, expand=True, resample=Image.NEAREST)
     x, y = c.p(kx_side, 9.0)
@@ -521,6 +606,8 @@ def s_result(t, u, T):
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * s)))
     if RIGHT and u < 0.4:
         return net_impact(t, u / 0.4, T + 0.35 * 0.4 * D(3))
+    if RIGHT and u < 0.7:
+        return top_down_you(t, (u - 0.4) / 0.3)
     if RIGHT:
         if u >= 0.7:      # cut: the reserves celebrate, spread out, in front of the stand
             img = backdrop(600, stadium=True)
@@ -549,9 +636,11 @@ def s_sheet(t, u, T):
     """the coach's clipboard: GK for Saturday"""
     img, c = fb.present_pitch(t)
     img = img.filter(ImageFilter.GaussianBlur(5))
-    paste(img, coach(look=-1, mouth="flat", blink=0.6 < u < 0.63), 22, 300, 1500)
+    CB = 1500
+    paste(img, coach(look=1, mouth="flat", blink=0.6 < u < 0.63), 22, 230, CB)
+    top = CB - 39 * 22
     d = ImageDraw.Draw(img)
-    x, y = 420, 900
+    x, y = 330, 880
     d.rounded_rectangle([x, y, x + 260, y + 300], 14, fill=(250, 246, 236), outline=OL, width=6)
     d.rectangle([x + 85, y - 16, x + 175, y + 20], fill=(120, 120, 130), outline=OL, width=4)
     d.text((x + 130, y + 60), "SATURDAY", font=font(800, 28), fill=OL, anchor="mm")
@@ -560,27 +649,35 @@ def s_sheet(t, u, T):
     name = "DIXON" if RIGHT else "#0"
     d.text((x + 120, y + 140), name[:int(len(name) * k + 0.999)] if k > 0 else "", font=font(800, 34),
            fill=(40, 90, 200) if RIGHT else (40, 150, 80), anchor="lm")
-    if u > 0.15:                   # his hand holds the pen and moves along the line
-        px = x + 120 + 18 * len(name) * k
-        d.line([(px, y + 150), (px + 60, y + 220)], fill=(30, 30, 40), width=10)
-        d.rounded_rectangle([px + 40, y + 200, px + 100, y + 260], 14, fill=SKIN["light"][0], outline=OL, width=5)
-        d.rectangle([px + 70, y + 250, px + 140, y + 300], fill=(30, 40, 80), outline=OL, width=5)   # navy sleeve
+    # his left hand holds the board's bottom edge; his right arm comes across from the shoulder with the pen
+    shoulder = (230 - 12 * 22 + 16 * 22, top + 19 * 22)
+    px = x + 120 + 18 * len(name) * k if u > 0.15 else x + 110
+    hand = (px + 30, y + 190)
+    d.line([shoulder, ((shoulder[0] + hand[0]) / 2, hand[1] + 40), hand], fill=OL, width=40)
+    d.line([shoulder, ((shoulder[0] + hand[0]) / 2, hand[1] + 40), hand], fill=(30, 40, 80), width=30)
+    d.line([(px, y + 150), (hand[0] + 4, hand[1] - 6)], fill=(30, 30, 40), width=10)
+    d.rounded_rectangle([hand[0] - 26, hand[1] - 26, hand[0] + 26, hand[1] + 26], 12, fill=SKIN["light"][0], outline=OL, width=5)
+    d.rounded_rectangle([x - 10, y + 270, x + 50, y + 320], 12, fill=SKIN["light"][0], outline=OL, width=5)
     return cam(img, 1.0 + 0.05 * u, 360, 860)
 
 
 def s_stare(t, u, T):
-    """over the coach's shoulder: Dixon (blue #2) celebrates on the right — the coach's eyes go to YOU, alone in goal"""
+    """Dixon (blue #2) waves at the coach — the coach's head turns away from him, to YOU, alone and downcast"""
     img, c = fb.present_pitch(t)
-    ground_shadow(img, c, 0.1, 7.8, 0.35)
-    sprite_at(img, c, res(10, pose="celebrate", mouth="grin"), 0.1, 7.8, Y=abs(math.sin(t * 7 + 1)) * 0.25, height_m=1.6)
-    ground_shadow(img, c, 1.5, 6.8, 0.4)
-    sprite_at(img, c, dixon(pose="celebrate", mouth="grin"), 1.5, 6.8, Y=abs(math.sin(t * 7)) * 0.25, height_m=1.6)
-    ground_shadow(img, c, -1.2, 8.5, 0.4)
-    sprite_at(img, c, hero(gloves=True, look=0, mouth="sad"), -1.2, 8.5, height_m=1.6)
-    paste(img, coach(view="back"), 24, 170, 1560)
-    k = ease_in_out(clamp((u - 0.15) / 0.85))
-    hx, hy = c.p(-1.2, 8.5, 0.9)
-    return cam(img, 1.0 + 0.9 * k, lerp(360, hx, k), lerp(800, hy, k))
+    ground_shadow(img, c, 1.3, 8.6, 0.4)
+    sprite_at(img, c, hero(gloves=True, look=-1, mouth="sad", blink=int(t * 2) % 5 == 0), 1.3, 8.6,
+              Y=0.015 * math.sin(t * 2.5), height_m=1.6)
+    ground_shadow(img, c, -1.5, 5.6, 0.4)
+    wave = int(t * 4) % 2 == 0 and u < 0.6
+    sprite_at(img, c, dixon(pose="celebrate" if wave else "stand", mouth="grin" if u < 0.6 else "flat"), -1.5, 5.6,
+              Y=0.15 * abs(math.sin(t * 7)) if u < 0.6 else 0.0, height_m=1.6)
+    turn = ease_in_out(clamp((u - 0.25) / 0.25))
+    cb = coach(view="back")
+    paste(img, cb, 24, 420, 1560)
+    d = ImageDraw.Draw(img)
+    k = ease_in_out(clamp((u - 0.45) / 0.55))
+    hx, hy = c.p(1.3, 8.6, 0.9)
+    return cam(img, 1.0 + 0.8 * k, lerp(360, hx, k), lerp(820, hy, k))
 
 
 def s_flash84(t, u, T):
@@ -596,18 +693,54 @@ def s_grandad84(t, u, T):
     return fb.s_same(t, (u - 0.5) / 0.5, T)
 
 
+def face_frame(sprite, t, v, bg):
+    img = bg.copy()
+    paste(img, sprite, 26, 360, 1460 + 20 * v)
+    vignette(img, 0.55)
+    return cam(img, 1.0 + 0.15 * ease_in_out(v), 360, 800)
+
+
+def s_reveal(t, u, T):
+    """stretcher -> push in on young #9's face -> the tape glitches -> the SAME face, today: the coach"""
+    if u < 0.45:
+        return fb.s_stretcher(t, u / 0.45, T)
+    bg84 = old_stadium(560).filter(ImageFilter.GaussianBlur(6))
+    ImageDraw.Draw(bg84).rectangle([0, 560, FW, FH], fill=(60, 90, 56))
+    if u < 0.75:
+        v = (u - 0.45) / 0.3
+        img = face_frame(young_coach(mouth="flat", look=0, blink=0.6 < v < 0.66), t, v, bg84)
+        rain84(img, t, 110)
+        return img
+    v = (u - 0.75) / 0.25
+    bg = fb.present_pitch(t)[0].filter(ImageFilter.GaussianBlur(6))
+    img = face_frame(coach(mouth="flat", look=0), t, 1.0, bg)
+    img = ImageEnhance.Color(img.convert("RGB")).enhance(0.45).convert("RGBA")
+    if v < 0.3:                                   # the tape tears between the two faces
+        img = vhs(img, t, 2.0)
+        rng = random.Random(int(t * 30))
+        for _ in range(10):
+            y = rng.uniform(0, FH); hgt = rng.uniform(8, 50)
+            band = img.crop((0, int(y), FW, int(y + hgt)))
+            img.paste(band, (int(rng.uniform(-50, 50)), int(y)))
+    return img
+
+
 def s_walk(t, u, T):
-    """the coach walks off; you are left alone in the goalmouth"""
+    """the coach walks off without looking back; you stay in the goalmouth"""
     c = Cam(camX=0.0, camH=1.7, hor=470)
     img = backdrop(470, stadium=True)
     pitch_persp(img, c, Zgoal=9.0)
     goal3d(img, c, 9.0)
-    sprite_at(img, c, hero(gloves=True, look=-1), 0.3, 9.0, height_m=1.6)
-    Z = lerp(6.5, 2.2, ease_in_out(u))
-    X = lerp(-1.2, -4.0, ease_in_out(u))
-    ground_shadow(img, c, X, Z, 0.4)
-    sprite_at(img, c, coach(pose="run", phase=t * 1.3, look=-1), X, Z, height_m=1.75)
-    return cam(img, 1.08 + 0.04 * u, 360, 660)
+    ground_shadow(img, c, 0.3, 9.0, 0.4)
+    sprite_at(img, c, hero(gloves=True, look=-1 if u < 0.7 else 0, mouth="sad", blink=int(t * 2) % 5 == 0), 0.3, 9.0,
+              Y=0.015 * math.sin(t * 2.5), height_m=1.6)
+    w = ease_in_out(u)
+    Z = lerp(2.8, 15.0, w)
+    X = lerp(0.9, -4.6, w)
+    if Z < 14.5:
+        ground_shadow(img, c, X, Z, 0.4)
+        sprite_at(img, c, coach(view="back", pose="run", phase=t * 1.2), X, Z, height_m=1.75)
+    return cam(img, 1.05 + 0.05 * u, 360, 680)
 
 
 def dorm_night(t):
@@ -677,7 +810,7 @@ def s_night(t, u, T):
 
 def s_ask(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
-    phone_ui(img, 330, 820, "talk", t)
+    phone_ui(img, 330, 820, "talk" if u < 0.7 else "silent", t)
     return cam(img, 1.0 + 0.15 * ease_in_out(u), 360, 760)
 
 
@@ -706,15 +839,22 @@ def s_mason(t, u, T):
 def s_message(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
     phone_ui(img, 330, 820, "msg", t)
-    n = int(clamp((t - T - 0.25) / 0.9) * 19)     # the message types itself on the screen (no bubble)
-    msg = "STAY AWAY FROM HIM."
     d = ImageDraw.Draw(img)
-    l1, l2 = msg[:10], msg[10:]
-    d.text((330, 950), l1[:n], font=font(800, 40), fill=(255, 90, 90), anchor="mm", stroke_width=3, stroke_fill=OL)
-    if n > 10:
-        d.text((330, 1000), l2[:n - 10], font=font(800, 40), fill=(255, 90, 90), anchor="mm", stroke_width=3, stroke_fill=OL)
+    typing = u < 0.3 and not (0.12 < u < 0.18)
+    if typing:                                     # "..." Grandad is typing (phone UI, no bubble)
+        for j in range(3):
+            r = 10 + 4 * abs(math.sin(t * 8 + j))
+            d.ellipse([290 + j * 40 - r, 960 - r, 290 + j * 40 + r, 960 + r], fill=(200, 205, 225))
+    land = T + 0.3 * D(20)
+    if u >= 0.3:
+        n = int(clamp((t - land) / 0.5) * 19)
+        msg = "STAY AWAY FROM HIM."
+        l1, l2 = msg[:10], msg[10:]
+        d.text((330, 950), l1[:n], font=font(800, 40), fill=(255, 90, 90), anchor="mm", stroke_width=3, stroke_fill=OL)
+        if n > 10:
+            d.text((330, 1000), l2[:n - 10], font=font(800, 40), fill=(255, 90, 90), anchor="mm", stroke_width=3, stroke_fill=OL)
     vignette(img, 0.5)
-    return cam(img, 1.0 + 0.12 * ease_in_out(u), 360, 900)
+    return cam(img, 1.0 + 0.12 * ease_in_out(u), 360, 900, *shake(t, land, .25, 6))
 
 
 CARDS = [(170, "ASK COACH", "KNOCK ON HIS DOOR", C_Y), (450, "STAY AWAY", "LISTEN TO GRANDAD", C_R)]
@@ -773,7 +913,7 @@ def s_end(t, u, T):
     k = spring(t - T, 16, 7)
     py = lerp(1400, 420 + UY * 0.4, clamp(k, 0, 1.2))
     d.rounded_rectangle([24, py, 600, py + 560], 34, fill=(14, 18, 44), outline=C_Y, width=6)
-    paste(img, hero(mouth="smile", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 140, py + 330 - abs(math.sin(t * 3)) * 8)
+    paste(img, hero(mouth="flat", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 140, py + 330)
     d.text((390, py + 90), "DON'T MISS", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
     d.text((390, py + 150), "PART 8", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
     tap = T + 0.8
@@ -800,7 +940,7 @@ def s_end(t, u, T):
 
 
 SCENES = [s_hook, s_vote, s_kick, s_result, s_sheet, s_stare, fb.s_glove, fb.s_pale, s_flash84, s_grandad84,
-          fb.s_hang, fb.s_jump, fb.s_impact, fb.s_stretcher, fb.s_mud, fb.s_today, s_walk, s_night, s_ask, s_hangup,
+          fb.s_hang, fb.s_jump, fb.s_impact, s_reveal, fb.s_mud, fb.s_today, s_walk, s_night, s_ask, s_hangup,
           s_message, s_choice, s_end]
 assert len(SCENES) == len(LINES)
 
@@ -824,7 +964,7 @@ def frame(t):
     u = clamp((t - T) / max(0.1, D(i)))
     img = SCENES[i](t, u, T).convert("RGB")
     img = grade(img).convert("RGBA")
-    if i in FLASH:
+    if i in FLASH and not (SCENES[i] is s_reveal and u >= 0.75):
         img = vhs(img, t, 0.8)
         if not (i == 9 and u > 0.5):
             vhs_osd(img, t, "MAY 14 1984")

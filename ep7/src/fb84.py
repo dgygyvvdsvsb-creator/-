@@ -270,7 +270,7 @@ def s_hook(t, u, T):
 
 def present_pitch(t, Zg=8.5):
     c = Cam(camH=2.2, hor=470)
-    img = backdrop(470, stadium=False)
+    img = backdrop(470, stadium=True)
     pitch_persp(img, c, Zgoal=Zg)
     goal3d(img, c, Zg)
     return img, c
@@ -315,11 +315,9 @@ def s_glove(t, u, T):
     d.rectangle([24 + dx, 62, 46 + dx, 68], fill=G2)                                                  # strap
     d.polygon([(46 + dx, 52), (52 + dx, 44), (54 + dx, 48), (48 + dx, 58)], fill=G1)                  # thumb
     im = outline(im)
-    img.alpha_composite(im.resize((w * S, h * S), Image.NEAREST))
-    bx = 520 - 40 * u
-    draw_ball(img, bx, 330, 7.5)
-    glow_ring(img, 360 + dx * 10, 600, 200 + 30 * math.sin(t * 6), 0.4, (255, 220, 160))
-    glow_ring(img, 260 + dx * 10, 760, 60 + 10 * math.sin(t * 8), 0.8, (255, 80, 80))     # the red string glows
+    img.alpha_composite(im.resize((w * S, h * S), Image.NEAREST), (0, 170))
+    glow_ring(img, 360 + dx * 10, 770, 200 + 30 * math.sin(t * 6), 0.4, (255, 220, 160))
+    glow_ring(img, 260 + dx * 10, 930, 60 + 10 * math.sin(t * 8), 0.8, (255, 80, 80))     # the red string glows
     slowmo_bars(img, 1.0)
     return cam(img, 1.0 + 0.06 * u, 360, 640)
 
@@ -412,7 +410,7 @@ def s_terrace(t, u, T):
 def s_grandad_intro(t, u, T):
     img, c = set84(560, 7.0, camH=1.1)
     bob = abs(math.sin(t * 5)) * 0.06
-    pose = "catch" if int(t * 4) % 2 else "ready"
+    pose = "ready"
     ground_shadow(img, c, 0, 7.0, 0.5)
     sprite_at(img, c, young_grandad(pose=pose, mouth="smile"), 0, 7.0, Y=bob, height_m=1.85)
     for X in (-6.5, 6.0):
@@ -427,7 +425,7 @@ def s_same(t, u, T):
     img = old_stadium(560).filter(ImageFilter.GaussianBlur(5))
     d = ImageDraw.Draw(img)
     d.rectangle([0, 560, FW, FH], fill=(70, 110, 62))
-    clap = int(t * 3) % 2 == 0 and u < 0.55
+    clap = u < 0.55
     paste(img, young_grandad(pose="catch" if clap else "stand", mouth="smile", blink=0.6 < u < 0.64), 24, 360, 1450)
     # the gloves and the red string glow
     k = 0.5 + 0.5 * math.sin(t * 7)
@@ -588,7 +586,7 @@ def s_hang(t, u, T):
     d = ImageDraw.Draw(img)
     for y in range(FH):
         d.line([(0, y), (FW, y)], fill=tuple(int(lerp(a, b, y / FH)) for a, b in zip((10, 12, 30), (60, 50, 80))))
-    for px, py in ((120, 260), (600, 300)):
+    for px, py in ((120, 470), (600, 500)):
         d.rectangle([px - 70, py - 40, px + 70, py + 40], fill=(40, 40, 50), outline=OL, width=4)
         for r in range(3):
             for k in range(5):
@@ -601,7 +599,7 @@ def s_hang(t, u, T):
     # heads and raised arms at the bottom edge (silhouettes)
     for i, x in enumerate((60, 200, 330, 470, 610)):
         sp = (young_grandad if i == 2 else (kingston if i % 2 else newcastle))
-        s_ = sp(4 + i) if sp is not young_grandad else sp(pose="reach")
+        s_ = sp(4 + i) if sp is not young_grandad else sp(pose="reach", view="back")
         if sp is newcastle and i == 3:
             s_ = young_coach(view="back")
         paste(img, s_, 16, x, 1660 + (60 if i != 2 else 0), alpha=1.0)
@@ -624,8 +622,8 @@ def s_impact(t, u, T):
     mx, my = collision(img, 1.0, clamp(u / 0.3), t)
     if u > 0.45:        # gravity: Grandad drops out of the air into the mud, #9 lands on his feet
         return s_silence(t, (u - 0.45) / 0.55 * 0.75, T)
-    b = clamp(u / 0.6)
-    ball_side(img, mx + 40 + 220 * b, max(430, my - 100 - 60 * math.sin(b * math.pi * 0.6)), 2.6)
+    b = clamp(u / 0.45)
+    ball_side(img, mx + 40 + 520 * b, max(430, my - 100 - 80 * b), 2.6)
     impact_lines(img, mx, my + 160, T, t, 16)
     glow_ring(img, mx, my + 160, 80 + 300 * clamp(u * 2), 0.9 * (1 - clamp(u * 2)), (255, 255, 255))
     img = flash(img, 0.85 * clamp(1 - u * 5))
@@ -646,7 +644,7 @@ def s_silence(t, u, T):
     if 0.55 < u < 0.8:
         mud_splash(img, 300, ground + 10, (u - 0.55) / 0.25, 70)
     b = clamp(u)
-    ball_side(img, lerp(700, 420, b), ground - 20 - 200 * abs(math.sin(b * math.pi * 1.5)) * (1 - b), 2.2)
+    pass                                     # the ball is gone (flew off after the knee)
     rain84(img, t, 140)
     img = ImageEnhance.Color(img.convert("RGB")).enhance(0.25).convert("RGBA")
     vignette(img, 0.6)
@@ -705,7 +703,7 @@ def s_rollin(t, u, T):
 def s_stretcher(t, u, T):
     img = old_stadium(640).copy()
     pitch_persp(img, Cam(camH=1.4, hor=640), None, warm=False)
-    x0 = lerp(70, 130, u)
+    x0 = lerp(-20, 160, u)
     step = abs(math.sin(t * 4)) * 6
     S_ = 10
     by = 990
@@ -754,7 +752,10 @@ def s_today(t, u, T):
         hx, hy = 420 - 12 * 22 + (3 + 16) * 22, top + 25 * 22              # his hand by his side
         wx, wy = hx - 20, hy + 900 * f * f
         d = ImageDraw.Draw(img)
-        d.line([collar, (wx + 30, wy - 10)], fill=(40, 40, 50), width=4)
+        if f <= 0:
+            d.line([collar, (wx + 30, wy - 10)], fill=(40, 40, 50), width=4)
+        else:                                   # he let go: the lanyard trails above the falling whistle
+            d.line([(wx + 30, wy - 10), (wx + 50, wy - 130), (wx + 20, wy - 220)], fill=(40, 40, 50), width=4)
         d.rounded_rectangle([wx, wy - 26, wx + 64, wy + 8], 12, fill=(200, 204, 214), outline=OL, width=4)
         d.rectangle([wx + 50, wy - 30, wx + 70, wy - 18], fill=(170, 174, 186), outline=OL, width=3)
         if u < 0.2:

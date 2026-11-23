@@ -44,12 +44,17 @@ for k in range(int(D(0) / 0.25)): step(0.1 + k * 0.25, 0.5)
 for k in range(3): thud(S[1] + 0.2 + k * 0.6, 0.45); thud(S[1] + 0.36 + k * 0.6, 0.3)
 # 2 the kick, the dive
 add(S[2] + 0.06 * D(2), tone(1800, .08, .03), .15)                       # the glance (tick)
-whoosh(S[2] + 0.24 * D(2), 1.8); thud(S[2] + 0.24 * D(2), 0.8)           # you explode off the line
-kick(S[2] + 0.36 * D(2), 0.6)                                             # a calm side-foot
-thud(S[2] + 0.40 * D(2), 1.4)                                             # you land
+whoosh(S[2] + 0.16 * D(2), 1.8); thud(S[2] + 0.16 * D(2), 0.8)           # you explode off the line
+kick(S[2] + 0.363 * D(2), 0.6)                                             # a calm side-foot
+thud(S[2] + 0.28 * D(2), 1.4)                                             # you land
 x_ = np.arange(int(1.4 * sr)) / sr                                         # the ball rolling on the grass
-add(S[2] + 0.38 * D(2), lp(noise(1.4), 20)[:len(x_)] * np.sin(2 * np.pi * 9 * x_) ** 2 * 0.5, .25)
+add(S[2] + 0.44 * D(2), lp(noise(1.4), 20)[:len(x_)] * np.sin(2 * np.pi * 9 * x_) ** 2 * 0.5, .25)
 if not RIGHT: thud(S[2] + 0.5 * D(2), 1.6)
+# rewind squeal after frame 0, the reveal glitch (#9 -> the coach)
+n_ = int(.45 * sr); x_ = np.arange(n_) / sr
+add(0.95, np.sin(2 * np.pi * (2400 - 2000 * x_ / .45) * x_) * .25 * np.sin(np.linspace(0, np.pi, n_)), .5)
+add(S[13] + 0.75 * D(13), lp(noise(0.35), 2) * 0.5)
+for k in range(2): thud(S[13] + 0.8 * D(13) + k * 0.35, 0.8)
 # 3 result
 if RIGHT:
     net(S[3] + 0.14 * D(3)); thud(S[3] + 0.14 * D(3), 1.6); roar(S[3] + 0.2 * D(3), 2.0, 1.4)
