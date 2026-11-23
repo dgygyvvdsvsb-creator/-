@@ -386,7 +386,7 @@ def arrow_on_grass(img, side, k, col, lab, bg, t, T0):
         d.line([pts[j], pts[j + 1]], fill=OL, width=18)
         d.line([pts[j], pts[j + 1]], fill=col, width=11)
     if k >= 1:
-        pill(img, x1, y1 - 60, lab, bg, spring(t - T0, 13, 7), 40)
+        pill(img, min(560, max(160, x1)), 560, lab, bg, spring(t - T0, 13, 7), 40)      # above the crossbar
 
 
 def s_vote(t, u, T):
@@ -399,7 +399,7 @@ def s_vote(t, u, T):
                    (40, 110, 200) if RIGHT else (200, 160, 20), t, T + 0.5 * D(1))
     keeper_sprite(img, "ready", Y=0.03 * abs(math.sin(t * 5)))
     posts_fg(img, c)
-    pill(img, 150, 700, "YOU VOTED", (40, 150, 80), spring(t - T - 0.1, 13, 7), 30)
+    pill(img, 165, 560, "YOU VOTED", (40, 150, 80), spring(t - T - 0.1, 13, 7), 30)
     shoot_bar(img)
     return cam(img, 1.02 + 0.02 * u, 360, 820)
 
