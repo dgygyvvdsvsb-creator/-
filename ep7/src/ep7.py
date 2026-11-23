@@ -162,7 +162,8 @@ def taker_and_ball(img, c, t, run=None, kick=None):
     phase = dist / stride
     bob = abs(math.sin(phase * math.pi * 2)) * 0.07
     if kick is not None:
-        pose, ph, bob = "kick", kick, 0.0
+        pose, ph = "strikeF", kick
+        bob = 0.1 * math.sin(clamp((kick - 0.55) / 0.45) * math.pi) if kick > 0.55 else 0.0   # little hop after the strike
     elif p >= 0.999:
         pose, ph = "stand", 0.0
     else:
@@ -212,9 +213,27 @@ def s_vote(t, u, T):
 
 def s_kick(t, u, T):
     """he strikes it to your LEFT. Wrong vote: you dive right, it goes in. Right vote: you dive left and save."""
-    img, c = keeper_set(t)
     kick = 0.18
-    taker_and_ball(img, c, t, kick=clamp((u - kick + 0.1) / 0.16) if u > kick - 0.1 else None)
+    cu0, cu1 = kick - 0.12, kick + 0.06
+    if cu0 <= u < cu1:                       # close-up insert of the strike: low, in front of him
+        v = (u - cu0) / (cu1 - cu0)
+        c2 = Cam(camX=0.0, camH=0.5, hor=640)
+        img = backdrop(640, stadium=True)
+        pitch_persp(img, c2, None)
+        ph = clamp(v * 1.1)                  # 0 backswing .. 0.45 contact .. 1 follow-through
+        shadow(img, 360, 1150, 300, 50, 100)
+        paste(img, res(10, pose="strikeF", phase=ph, mouth="open" if ph > 0.4 else "flat"), 17, 360, 1160 - (30 * math.sin(clamp((ph - 0.55) / 0.45) * math.pi) if ph > 0.55 else 0))
+        contact = 0.45
+        if ph < contact:
+            draw_ball(img, 330, 1150, 4.0)
+        else:
+            w_ = (ph - contact) / (1 - contact)
+            draw_ball(img, lerp(330, 120, w_), lerp(1150, 1240, w_) - 120 * w_, lerp(4.0, 9.0, w_))
+            impact_lines(img, 330, 1110, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), t, 12)
+        shoot_bar(img)
+        return cam(img, 1.0, 360, 800, *shake(t, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), .2, 10))
+    img, c = keeper_set(t)
+    taker_and_ball(img, c, t, kick=clamp((u - kick + 0.15) / 0.33) if u > kick - 0.15 else None)
     a = clamp((u - kick) / 0.32)                                  # ~0.7 s ball flight
     dive = ease_out(clamp((u - kick + 0.04) / 0.3))
     side = 1 if RIGHT else -1

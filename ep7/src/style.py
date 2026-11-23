@@ -126,6 +126,21 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
                 y = 18 + math.cos(ang) * i
                 c = legc if i < 4 else (kit.socks if i < 8 else OL)
                 R(int(x) - 1, int(y), int(x) + 1, int(y), c)
+        elif pose == "strikeF":
+            # front view, LEFT-footed strike (his left = screen right): plant, backswing, contact, follow-through
+            k = phase
+            R(4, 18, 6, 21, legc); R(4, 22, 6, 25, kit.socks); R(3, 26, 6, 27, OL)          # standing leg, planted
+            if k < 0.38:                                    # backswing: knee bends, the boot rises behind the leg
+                b = k / 0.38
+                lift = min(3, int(round(4 * b)))
+                R(10, 18, 12, 21, legc)
+                R(10, 22, 12, 25 - lift, kit.socks)
+                R(10, 26 - lift - 1, 13, 26 - lift, OL)
+            elif k < 0.55:                                  # contact: the leg swings across, toward the ball in front of him
+                R(10, 18, 12, 21, legc)
+                R(9, 22, 11, 25, kit.socks)
+                R(7, 26, 11, 28, OL); R(8, 26, 10, 26, (70, 70, 80))
+            # follow-through (k >= 0.55) is drawn after the shorts, in front of them
         elif sit or pose in ("sit", "hurt"):
             R(5, 18, 7, 20, kit.shorts); R(10, 18, 12, 20, kit.shorts)
             R(5, 21, 7, 23, legc); R(10, 21, 12, 23, legc)
@@ -146,6 +161,12 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         R(4, 15, 13, 18, kit.shorts)
         R(11, 15, 13, 18, shade(kit.shorts))
         R(8, 17, 9, 18, shade(kit.shorts, 0.7))
+    if pose == "strikeF" and phase >= 0.55:   # follow-through: knee up, the boot comes toward us (bigger), in front of the shorts
+        f = (phase - 0.55) / 0.45
+        up = int(round(3 * math.sin(min(1.0, f * 1.4) * math.pi / 2)))
+        R(9, 16 - up, 12, 19 - up, legc)               # thigh, foreshortened
+        R(9, 20 - up, 12, 22 - up, kit.socks)
+        R(7, 23 - up, 13, 25 - up, OL); R(8, 23 - up, 12, 23 - up, (70, 70, 80))
     # torso
     R(3, 8, 14, 15, kit.shirt)
     R(12, 8, 14, 15, shade(kit.shirt))
@@ -198,6 +219,11 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         arm(-1, 5, -7); arm(1, 12, -7)
     elif pose == "kick":
         arm(-1, -1, 12); arm(1, 17, 13)
+    elif pose == "strikeF":                 # balance: the arm opposite the kicking leg swings wide and high
+        if phase < 0.38:
+            arm(-1, -2, 9); arm(1, 18, 14)
+        else:
+            arm(-1, -3, 6); arm(1, 17, 15)
     elif pose == "kickL":
         arm(-1, 0, 13); arm(1, 18, 12)
     elif pose == "catch":
