@@ -206,36 +206,39 @@ COLD = 0.95          # cold open: the frozen dive (TikTok preview), then rewind 
 
 
 def s_cold(t):
-    """frame 0: you, frozen at full stretch in the air — low tilted angle, floodlight glare, the stand a blur"""
-    c = Cam(camX=0.0, camH=0.45, hor=820)
-    img = backdrop(820, stadium=True)
-    pitch_persp(img, c, Zgoal=7.0, box=False)
-    goal3d(img, c, 7.0, w=5.0, h=2.0)
-    img = img.filter(ImageFilter.GaussianBlur(3))
-    glow(img, 560, 300, 260, (255, 236, 170), 0.6)
+    """frame 0 = the same angle as the penalty (behind you): you are already flying RIGHT — and #10 hasn't even
+    struck the ball yet. The hook: you went too early. (no outcome shown)"""
+    img, c = keeper_set(t)
+    watchers(img, c, t)
+    ground_shadow(img, c, 0.3, 8.45, 0.4)
+    sprite_at(img, c, res(10, pose="strikeF", phase=0.2, mouth="flat"), 0.3, 8.45, height_m=1.6)   # backswing, ball untouched
+    ball_at(img, c, 0.0, 7.6, 0.0)
     k = clamp(t / COLD)
-    # radial speed lines from the keeper
-    cx, cy = 390, 700
-    speed_lines(img, t, cx, cy, n=26, a=120, r0=300, r1=700)
-    # YOU: front view, arms stretched, flying to your right (screen left from this side), big
-    sp = big(hero(pose="reach", gloves=True, mouth="open"), 15).rotate(72, expand=True, resample=Image.NEAREST)
-    x = cx - sp.width / 2 - 40 * k
-    y = cy - sp.height / 2 - 20 * k
-    img.alpha_composite(sp, (int(x), int(y)))
-    glow_ring(img, 155 - 40 * k, 600 - 20 * k, 105 + 8 * math.sin(t * 20), 0.6, (255, 230, 170))   # the gloves
-    # the ball: in flight, high on the other side, a hard motion blur — where is it going?
-    bx, by = 585 + 25 * k, 520 + 10 * k
-    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    od = ImageDraw.Draw(ov)
-    for j in range(5):
-        od.line([(bx + 10 + j * 4, by - 18 + j * 9), (bx + 150 + j * 10, by + 70 + j * 9)], fill=(255, 255, 255, 140 - j * 22), width=7)
-    img.alpha_composite(ov.filter(ImageFilter.GaussianBlur(2)))
-    draw_ball(img, bx, by + 40, 3.4)
-    shadow(img, 300, 1150, 420, 60, 90)
+    f = 0.55 + 0.05 * k                                   # frozen high in the dive, drifting a little
+    kx = 330 + 250 * f
+    ky = 1430 - 300 * math.sin(f * math.pi * 0.85)
+    for g, ga in ((0.22, 0.18), (0.12, 0.32)):           # afterimages
+        fg = f - g
+        ghost = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-85 * min(1.0, fg * 1.4), expand=True, resample=Image.NEAREST)
+        ghost.putalpha(ghost.split()[3].point(lambda a_: int(a_ * ga)))
+        gx, gy = 330 + 250 * fg, 1430 - 300 * math.sin(fg * math.pi * 0.85)
+        img.alpha_composite(ghost, (int(gx - ghost.width / 2), int(gy - ghost.height)))
+    sp = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-85, expand=True, resample=Image.NEAREST)
+    img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
+    dd = ImageDraw.Draw(img)
+    for j in range(9):
+        yy = ky - sp.height * (0.2 + 0.07 * j)
+        dd.line([(kx - 120, yy), (kx - 260 - 30 * j, yy)], fill=(255, 255, 255), width=5)
+    rng = random.Random(9)                                # turf hanging in the air from the push-off
+    for _ in range(18):
+        px, py = rng.uniform(200, 460), rng.uniform(1120, 1300)
+        rr = rng.uniform(5, 11)
+        dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=(120, 90, 60) if rng.random() < 0.5 else (70, 140, 70))
+    glow_ring(img, *c.p(0.0, 7.6, 0.1), 50 + 6 * math.sin(t * 18), 0.8, (255, 230, 150))   # the ball: not even kicked yet
     slowmo_bars(img, 1.0)
-    vignette(img, 0.45)
-    img = cam(img, 1.16 + 0.04 * k, 360, 700, rot=-7)
-    if t > COLD - 0.12:                                  # rewind cut
+    shoot_bar(img)
+    img = cam(img, 1.08 + 0.04 * k, 400, 820)
+    if t > COLD - 0.12:
         img = flash(img, (t - (COLD - 0.12)) / 0.12 * 0.8)
     return img
 
