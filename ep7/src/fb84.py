@@ -725,15 +725,6 @@ def s_stretcher(t, u, T):
     rain84(img, t, 120)
     img = ImageEnhance.Color(img.convert("RGB")).enhance(0.55).convert("RGBA")
     d = ImageDraw.Draw(img)                                           # his gloved hand hangs over the side (kept in full colour)
-    hx = sx0 + 190                                                    # at his shoulder
-    # the arm lies on the canvas, slips over the front edge and hangs IN FRONT of the pole (never through the bed)
-    d.polygon([(hx - 30, sy - 46), (hx - 4, sy - 50), (hx + 24, sy - 18), (hx - 2, sy - 14)], fill=KEEPER_G, outline=OL)   # upper arm on top
-    d.rectangle([hx - 2, sy - 22, hx + 22, sy + 56], fill=KEEPER_G, outline=OL, width=3)                               # forearm over the edge
-    d.rectangle([hx - 4, sy + 48, hx + 24, sy + 56], fill=(225, 30, 40))                                              # red string
-    d.rounded_rectangle([hx - 14, sy + 56, hx + 36, sy + 112], 10, fill=(255, 140, 20), outline=OL, width=4)          # glove
-    d.rectangle([hx - 14, sy + 56, hx + 36, sy + 68], fill=(210, 96, 10), outline=OL, width=3)
-    for f_ in range(3):
-        d.line([(hx - 2 + f_ * 12, sy + 90), (hx - 2 + f_ * 12, sy + 110)], fill=(200, 90, 10), width=3)
     return cam(img, 1.0 + 0.05 * u, 360, 800)
 
 

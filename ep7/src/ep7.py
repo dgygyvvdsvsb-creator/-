@@ -125,21 +125,58 @@ def keeper_set(t):
     return img, c
 
 
-def taker_and_ball(img, c, t, run=0.0, kick=None):
-    """their captain #10 runs up from the edge of the D to the ball on the spot"""
-    Z = lerp(13.5, 8.25, ease_in_out(run))
-    pose = "run" if run < 1 else "stand"
-    ph = t * 2.6
+RUN_PATH = [(-2.4, 14.2), (-1.6, 12.4), (-0.7, 10.6), (-0.1, 9.3), (0.3, 8.45)]   # diagonal run-up, slight curve
+
+
+def _path(p):
+    """point and distance along the run-up for progress p 0..1"""
+    pts = RUN_PATH
+    seg = [math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+    L = sum(seg)
+    d = clamp(p) * L
+    acc = 0.0
+    for i, sl in enumerate(seg):
+        if acc + sl >= d:
+            f = (d - acc) / sl
+            return (lerp(pts[i][0], pts[i + 1][0], f), lerp(pts[i][1], pts[i + 1][1], f)), d
+        acc += sl
+    return pts[-1], L
+
+
+def run_progress(t):
+    """continuous across lines 0-2: real speed in the hook, slow motion on the vote card, last steps + kick"""
+    s1, s2 = STARTS[1], STARTS[2]
+    kick_t = s2 + 0.18 * D(2)
+    if t < s1:
+        return 0.62 * (t / s1)
+    if t < s2:
+        return 0.62 + 0.18 * ((t - s1) / (s2 - s1))           # slow motion
+    return min(1.0, 0.80 + 0.20 * ease_out((t - s2) / (kick_t - s2)))
+
+
+def taker_and_ball(img, c, t, run=None, kick=None):
+    """their captain #10: diagonal run-up with a real stride (legs cycle with the distance covered), then the kick"""
+    p = run_progress(t)
+    (X, Z), dist = _path(p)
+    stride = 1.5                                   # metres per full leg cycle
+    phase = dist / stride
+    bob = abs(math.sin(phase * math.pi * 2)) * 0.07
     if kick is not None:
-        pose, ph = "kick", kick
-    ground_shadow(img, c, 0.35, Z, 0.4)
-    sprite_at(img, c, res(10, pose=pose, phase=ph), 0.35, Z, height_m=1.6)
+        pose, ph, bob = "kick", kick, 0.0
+    elif p >= 0.999:
+        pose, ph = "stand", 0.0
+    else:
+        pose, ph = "run", phase
+    ground_shadow(img, c, X, Z, 0.4)
+    sp = res(10, pose=pose, phase=ph, mouth="flat")
+    if pose == "run":                               # lean into the run
+        sp = sp.rotate(-6 if X < 0.2 else 0, resample=Image.NEAREST, expand=False)
+    sprite_at(img, c, sp, X, Z, Y=bob, height_m=1.6)
 
 
 def s_hook(t, u, T):
     img, c = keeper_set(t)
-    run = clamp(t / D(0)) * 0.6
-    taker_and_ball(img, c, t, run)
+    taker_and_ball(img, c, t)
     ball_at(img, c, 0.0, 7.6, 0.0)
     for k, X in enumerate((-6, -4.5, 4.6, 6.2)):            # both teams watching from the halfway line
         sprite_at(img, c, (first if k % 2 else res)((4, 5, 7, 6)[k]), X, 24, height_m=1.6)
@@ -162,7 +199,7 @@ def arrow_on_grass(img, side, k, col, lab, bg, t, T0):
 
 def s_vote(t, u, T):
     img, c = keeper_set(t)
-    taker_and_ball(img, c, t, 0.6 + 0.4 * u)
+    taker_and_ball(img, c, t)
     ball_at(img, c, 0.0, 7.6, 0.0)
     side = 1 if RIGHT else -1          # the hero's right = screen right (we see his back)
     arrow_on_grass(img, side, clamp((u - 0.1) / 0.4), C_B if RIGHT else C_Y, "RIGHT" if RIGHT else "LEFT",
@@ -177,7 +214,7 @@ def s_kick(t, u, T):
     """he strikes it to your LEFT. Wrong vote: you dive right, it goes in. Right vote: you dive left and save."""
     img, c = keeper_set(t)
     kick = 0.18
-    taker_and_ball(img, c, t, 1.0, kick=clamp((u - kick + 0.1) / 0.16) if u > kick - 0.1 else None)
+    taker_and_ball(img, c, t, kick=clamp((u - kick + 0.1) / 0.16) if u > kick - 0.1 else None)
     a = clamp((u - kick) / 0.32)                                  # ~0.7 s ball flight
     dive = ease_out(clamp((u - kick + 0.04) / 0.3))
     side = 1 if RIGHT else -1
