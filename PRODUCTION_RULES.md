@@ -46,3 +46,15 @@ Reference: remi_sport "De zéro à champion du monde" EP7 (85 s).
 - NO speech bubbles and NO name tags above characters. Dialogue appears ONLY in the captions.
 - Keepers diving must land on the grass after the dive; catches = ball stays in the gloves.
 - Objects passed between characters are held in their hands, never floating.
+
+## TikTok retention rules (from EP6 on, user decision 2026-11-23)
+Data (TikTok Studio, 237 views): ~45% of viewers leave in the first 2 s; after that the curve is almost flat
+(the story holds), full-watch 7.3% at 75.7 s. YouTube Shorts holds ~24 s average and grows faster.
+- TikTok layout: banner + captions BELOW TikTok's top UI (Following/For You tabs, LIVE, search):
+  banner at y≈230, captions from y≈270 (of 1280). YouTube Shorts keeps the current layout.
+- Frame 0: one big 3-5 word line in the upper half (not cut at the top), already moving, a sound hit;
+  a question / shock / result-before-cause — never a recap like "You asked for…".
+  The vote result comes at 2-3 s, not in the hook.
+- TikTok cut 62-65 s (just over 60 s for rewards). YouTube may stay longer.
+- Custom cover: 2-3 words in the CENTRE (the profile grid crops top and bottom).
+- Every new episode: check the first 2 s on a phone-size preview with TikTok's UI zones drawn on top.
