@@ -43,7 +43,12 @@ for k in range(int(D(0) / 0.25)): step(0.1 + k * 0.25, 0.5)
 # 1 vote: heartbeat
 for k in range(3): thud(S[1] + 0.2 + k * 0.6, 0.45); thud(S[1] + 0.36 + k * 0.6, 0.3)
 # 2 the kick, the dive
-kick(S[2] + 0.18 * D(2), 1.3); whoosh(S[2] + 0.3 * D(2), 1.2); thud(S[2] + 0.5 * D(2), 0.9)
+add(S[2] + 0.06 * D(2), tone(1800, .08, .03), .15)                       # the glance (tick)
+whoosh(S[2] + 0.24 * D(2), 1.8); thud(S[2] + 0.24 * D(2), 0.8)           # you explode off the line
+kick(S[2] + 0.36 * D(2), 0.6)                                             # a calm side-foot
+thud(S[2] + 0.40 * D(2), 1.4)                                             # you land
+x_ = np.arange(int(1.4 * sr)) / sr                                         # the ball rolling on the grass
+add(S[2] + 0.38 * D(2), lp(noise(1.4), 20)[:len(x_)] * np.sin(2 * np.pi * 9 * x_) ** 2 * 0.5, .25)
 if not RIGHT: thud(S[2] + 0.5 * D(2), 1.6)
 # 3 result
 if RIGHT:

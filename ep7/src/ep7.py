@@ -417,63 +417,89 @@ def net_impact(t, v, t_hit):
 
 
 
+def taker_face(t, v, T):
+    """close-up: in the stutter of his run-up #10 glances into YOUR right corner (screen right) — the bait"""
+    img = backdrop(560, stadium=True).filter(ImageFilter.GaussianBlur(6))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 560, FW, FH], fill=(78, 140, 76))
+    look = 1 if v > 0.3 else 0
+    sp = res(10, look=look, mouth="smile" if v > 0.55 else "flat", blink=False)
+    paste(img, sp, 30, 360, 1400)
+    if v > 0.3:                                   # a glint in the eye that looks right
+        glow_ring(img, 435, 620, 34 + 8 * math.sin(t * 20), 0.75, (255, 255, 220))
+    vignette(img, 0.5)
+    return cam(img, 1.0 + 0.12 * v, 400, 800)
+
+
 def s_kick(t, u, T):
-    """he strikes it to your LEFT. Wrong vote: you dive right, it goes in. Right vote: you dive left and save."""
-    kick = 0.18
-    cu0, cu1 = kick - 0.12, kick + 0.06
-    if cu0 <= u < cu1:                       # close-up insert of the strike: low, in front of him
-        v = (u - cu0) / (cu1 - cu0)
-        c2 = Cam(camX=0.0, camH=0.5, hor=640)
-        img = backdrop(640, stadium=True)
-        pitch_persp(img, c2, None)
-        ph = clamp(v * 1.1)                  # 0 backswing .. 0.45 contact .. 1 follow-through
-        shadow(img, 360, 1150, 300, 50, 100)
-        paste(img, res(10, pose="strikeF", phase=ph, mouth="open" if ph > 0.4 else "flat"), 17, 360, 1160 - (30 * math.sin(clamp((ph - 0.55) / 0.45) * math.pi) if ph > 0.55 else 0))
-        contact = 0.45
-        if ph < contact:
-            draw_ball(img, 330, 1150, 4.0)
-        else:
-            w_ = (ph - contact) / (1 - contact)
-            draw_ball(img, lerp(330, 120, w_), lerp(1150, 1240, w_) - 120 * w_, lerp(4.0, 9.0, w_))
-            impact_lines(img, 330, 1110, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), t, 12)
-        shoot_bar(img)
-        return cam(img, 1.0, 360, 800, *shake(t, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), .2, 10))
-    if RIGHT and u >= cu1:                  # wrong side: your eyes, then the split panel
-        if u < 0.55:
-            return pov_dive(t, (u - cu1) / (0.55 - cu1), T)
-        return split_panel(t, (u - 0.55) / 0.45, T + 0.55 * D(2))
+    """he baits you: a glance to your right, you go early — he rolls it calmly into the other corner"""
+    if u < 0.16:
+        return taker_face(t, u / 0.16, T)
     img, c = keeper_set(t)
     watchers(img, c, t)
+    kick = 0.36                                   # he waits for you to commit, THEN strikes
     kp = (u - kick + 0.15) / 0.33
     if kp >= 1.0:
         taker_and_ball(img, c, t, after=clamp((u - kick - 0.18) / (1 - kick - 0.18)))
     else:
         taker_and_ball(img, c, t, kick=clamp(kp) if u > kick - 0.15 else None)
-    a = clamp((u - kick) / 0.32)                                  # ~0.7 s ball flight
-    dive = ease_out(clamp((u - kick + 0.04) / 0.3))
     side = 1 if RIGHT else -1
-    sp = hero(view="back", pose="reach" if dive > 0.05 else "ready", gloves=True, mouth="open")
-    kx = 330 + side * 260 * dive
-    ky = 1430 - 230 * math.sin(dive * math.pi * 0.8)
-    paste(img, sp, 13, kx, ky, rot=-side * 80 * dive)
+    go = 0.24                                     # you commit BEFORE the strike
+    dv = clamp((u - go) / 0.16)                   # explosive and fast: ~0.45 s in the air
+    land = clamp((u - go - 0.16) / 0.08)
+    if u < go:
+        paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - 10 * math.sin(u * 30))
+    else:
+        f = ease_out(dv)
+        kx = 330 + side * 250 * f
+        ky = 1430 - 300 * math.sin(f * math.pi * 0.85) + 60 * land
+        rot = -side * (85 * min(1.0, f * 1.4))
+        # push-off dust and turf at the take-off spot
+        if dv < 0.6:
+            dd = ImageDraw.Draw(img)
+            rng = random.Random(9)
+            for _ in range(22):
+                ang = rng.uniform(math.pi * 0.9, math.pi * 1.9)
+                r_ = rng.uniform(40, 220) * ease_out(dv / 0.6)
+                px, py = 330 + math.cos(ang) * r_ * 1.3, 1300 + math.sin(ang) * r_ * 0.6 + 200 * (dv / 0.6) ** 2
+                col = (120, 90, 60) if rng.random() < 0.5 else (70, 140, 70)
+                rr = rng.uniform(5, 12) * (1 - dv / 0.6)
+                dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=col)
+        # afterimages: a shiver of ghosts behind the flying body
+        for g, ga in ((0.18, 0.18), (0.1, 0.32)):
+            fg = ease_out(clamp((u - go - g * 0.16) / 0.16))
+            if fg <= 0 or f >= 0.999:
+                continue
+            ghost = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-side * 85 * min(1.0, fg * 1.4), expand=True, resample=Image.NEAREST)
+            gx, gy = 330 + side * 250 * fg, 1430 - 300 * math.sin(fg * math.pi * 0.85)
+            ghost.putalpha(ghost.split()[3].point(lambda a_: int(a_ * ga)))
+            img.alpha_composite(ghost, (int(gx - ghost.width / 2), int(gy - ghost.height)))
+        sp = big(hero(view="back", pose="reach", gloves=True), 13).rotate(rot, expand=True, resample=Image.NEAREST)
+        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
+        if 0.05 < dv < 1:                          # streaks behind him
+            dd = ImageDraw.Draw(img, "RGBA")
+            for j in range(9):
+                yy = ky - sp.height * (0.2 + 0.07 * j)
+                dd.line([(kx - side * 120, yy), (kx - side * (260 + 30 * j), yy)], fill=(255, 255, 255), width=5)
+        if 0 < land < 1:                           # the landing: grass spray
+            impact_lines(img, kx, ky - 40, T + (go + 0.16) * D(2), t, 10)
+    # the ball: a calm, rolling side-foot into the empty LEFT corner (screen left)
     if u < kick:
         ball_at(img, c, 0.0, 7.6, 0.0)
     else:
+        a = clamp((u - kick) / 0.55)
         sx, sy = c.p(0.0, 7.6)
-        ex, ey = 80, 1020
-        if not RIGHT:                                             # saved: it hits the gloves at full stretch
-            ex, ey = kx - 150, ky - 250
-        bx, by = lerp(sx, ex, a), lerp(sy - 12, ey, a) - 60 * math.sin(a * math.pi)
-        if a < 1:
-            draw_ball(img, bx, by, lerp(1.0, 3.2, a ** 1.5))
-        elif not RIGHT:
-            b = clamp((u - kick - 0.32) / 0.3)
-            draw_ball(img, lerp(ex, -60, b), lerp(ey, ey - 260, b), 3.2)
-            glow_ring(img, ex, ey, 80 + 200 * b, 0.8 * (1 - b), (255, 255, 200))
+        if RIGHT:
+            ex, ey = 70, 1180
+        else:
+            ex, ey = 330 - 300, 1050
+        bx, by = lerp(sx, ex, a), lerp(sy, ey, a)
+        shadow(img, bx, by + 6, 50 * lerp(1.0, 3.0, a), 12 * lerp(1.0, 3.0, a), 80)
+        draw_ball(img, bx, by, lerp(1.0, 3.4, a))
         if a >= 1 and RIGHT:
-            img = flash(img, 0.4 * clamp(1 - (u - kick - 0.32) * 8), (255, 50, 50))
+            img = flash(img, 0.4 * clamp(1 - (u - kick - 0.55) * 10), (255, 50, 50))
     shoot_bar(img)
-    return cam(img, 1.04, 360, 800, *shake(t, T + (kick + 0.32) * D(2), .3, 12))
+    return cam(img, 1.04, 360, 820, *shake(t, T + (go + 0.16) * D(2), .25, 10))
 
 
 def s_result(t, u, T):
