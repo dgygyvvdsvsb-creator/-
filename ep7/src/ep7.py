@@ -22,7 +22,6 @@ LINES = [
     ([("GOAL.", R_), ("THE", W), ("RESERVES", B), ("WIN.", W)] if RIGHT else [("SAVED!", G), ("FIRST", W), ("TEAM", W), ("WIN!", G)]),
     ([("SATURDAY'S", W), ("SHIRT:", W), ("DIXON.", B), ("NOT", R_), ("YOU.", R_)] if RIGHT else
      [("SATURDAY'S", W), ("SHIRT:", W), ("YOURS.", G)]),
-    [("MASON", R_), ("LAUGHS.", W), ("\"TOLD", W), ("YOU.\"", R_)] if RIGHT else [("EVEN", W), ("MASON", R_), ("CLAPS.", W)],
     [("BUT", W), ("THE", W), ("COACH", W), ("ISN'T", R_), ("LOOKING", W), ("AT", W), ("DIXON.", B)] if RIGHT else
     [("BUT", W), ("THE", W), ("COACH", W), ("ISN'T", R_), ("SMILING.", W)],
     [("HE", W), ("STARES", W), ("AT", W), ("YOUR", W), ("GLOVES.", O), ("RED", R_), ("STRING.", R_)],
@@ -43,7 +42,7 @@ LINES = [
     [("ASK", W), ("THE", W), ("COACH...", Y), ("OR", W), ("STAY", R_), ("AWAY?", R_)],
     [("VOTE", W), ("BELOW.", G), (FOLLOW, R_), ("FOR", W), ("PART 8.", Y)],
 ]
-FLASH = {9, 10, 11, 12, 13, 14, 15}                      # the 1984 tape
+FLASH = {8, 9, 10, 11, 12, 13, 14}                      # the 1984 tape
 _vf = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"vo/lines_{PLATFORM}.json")
 if os.path.exists(_vf):
     VOICE = [tuple(x) for x in json.load(open(_vf))]
@@ -51,7 +50,7 @@ else:
     VOICE, t0 = [], 0.05
     for i, ws in enumerate(LINES):
         d_ = max(1.3, 0.34 * len(ws) + 0.3)
-        if i in (12, 13, 14):
+        if i in (11, 12, 13):
             d_ = 1.35
         VOICE.append((t0, t0 + d_)); t0 += d_ + 0.42
 STARTS = [max(0.0, a - 0.12) for a, _ in VOICE]
@@ -66,6 +65,7 @@ def D(i):
 fb.D = D            # the reused 1984 scenes take their spring timings from this episode's clock
 fb.STARTS = STARTS
 fb.UYF = UY
+fb.CARD_I, fb.TODAY_I = 8, 15
 
 
 def word_times(i):
@@ -220,13 +220,19 @@ def s_result(t, u, T):
     if RIGHT or u < 0.4:
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * s)))
     if RIGHT:
+        if u >= 0.5:      # cut: the reserves celebrate, spread out, in front of the stand
+            img = backdrop(600, stadium=True)
+            c2 = Cam(camX=0.0, camH=1.6, hor=600)
+            pitch_persp(img, c2, None)
+            for k, (X, Z) in enumerate(((0.0, 5.0), (-1.7, 5.8), (1.7, 5.8))):
+                ground_shadow(img, c2, X, Z, 0.4)
+                sprite_at(img, c2, res((10, 5, 4)[k], pose="celebrate", mouth="grin"), X, Z,
+                          Y=abs(math.sin(t * 7 + k * 1.3)) * 0.3, height_m=1.6)
+            shoot_bar(img, res_win=True)
+            return cam(img, 1.0 + 0.05 * u, 360, 860)
         bx, by = c.p(1.8, 9.9, 0.3)
         draw_ball(img, bx, by + 10, 1.0)
         impact_lines(img, bx, by, T, t, 12)
-        for k, (X, Z) in enumerate(((-0.3, 5.3), (-0.8, 7.2), (0.6, 7.6), (0.4, 6.6))):    # the reserves celebrate
-            ground_shadow(img, c, X, Z, 0.35)
-            sprite_at(img, c, res((10, 5, 7, 4)[k], pose="celebrate", mouth="grin"), X + math.sin(t * 6 + k) * 0.1, Z,
-                      Y=abs(math.sin(t * 7 + k)) * 0.25, height_m=1.6)
         img = flash(img, 0.25 * clamp(1 - u * 5), (255, 50, 50))
     else:
         if u >= 0.4:
@@ -236,7 +242,7 @@ def s_result(t, u, T):
         for k, X in enumerate((-2.6, 2.8)):
             sprite_at(img, c, first((4, 6)[k], pose="run", phase=t * 2.4), X, lerp(4.0, 7.5, u), height_m=1.6)
     shoot_bar(img, res_win=RIGHT)
-    return cam(img, 1.15 + 0.05 * u, 340, 760)
+    return cam(img, 1.15 + 0.05 * u, 360, 640)
 
 
 def s_sheet(t, u, T):
@@ -265,10 +271,10 @@ def s_sheet(t, u, T):
 def s_stare(t, u, T):
     """over the coach's shoulder: Dixon (blue #2) celebrates on the right — the coach's eyes go to YOU, alone in goal"""
     img, c = fb.present_pitch(t)
-    ground_shadow(img, c, 0.4, 7.6, 0.35)
-    sprite_at(img, c, res(10, pose="celebrate", mouth="grin"), 0.4, 7.6, Y=abs(math.sin(t * 7 + 1)) * 0.25, height_m=1.6)
-    ground_shadow(img, c, 1.2, 6.5, 0.4)
-    sprite_at(img, c, dixon(pose="celebrate", mouth="grin"), 1.2, 6.5, Y=abs(math.sin(t * 7)) * 0.25, height_m=1.6)
+    ground_shadow(img, c, 0.1, 7.8, 0.35)
+    sprite_at(img, c, res(10, pose="celebrate", mouth="grin"), 0.1, 7.8, Y=abs(math.sin(t * 7 + 1)) * 0.25, height_m=1.6)
+    ground_shadow(img, c, 1.5, 6.8, 0.4)
+    sprite_at(img, c, dixon(pose="celebrate", mouth="grin"), 1.5, 6.8, Y=abs(math.sin(t * 7)) * 0.25, height_m=1.6)
     ground_shadow(img, c, -1.2, 8.5, 0.4)
     sprite_at(img, c, hero(gloves=True, look=0, mouth="sad"), -1.2, 8.5, height_m=1.6)
     paste(img, coach(view="back"), 24, 170, 1560)
@@ -344,7 +350,7 @@ def phone_ui(img, cx, cy, state, t, k=1.0):
     paste(img, grandad(mouth="flat", blink=state == "silent" and int(t * 2) % 4 == 0), 8, cx, cy + 120)
     d = ImageDraw.Draw(img)
     d.text((cx, cy - 275), "GRANDAD", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
-    sec = max(0, int(t - STARTS[18] - 1.2))
+    sec = max(0, int(t - STARTS[17] - 1.2))
     sub = {"calling": "calling...", "talk": f"00:{sec:02d}", "silent": f"00:{sec:02d}",
            "ended": "CALL ENDED", "msg": "1 NEW MESSAGE"}[state]
     d.text((cx, cy - 232), sub, font=font(600 if state != "ended" else 800, 26), fill=(180, 190, 220) if state != "ended" else (240, 80, 80), anchor="mm")
@@ -496,7 +502,7 @@ def s_end(t, u, T):
     return img
 
 
-SCENES = [s_hook, s_vote, s_kick, s_result, s_sheet, s_mason, s_stare, fb.s_glove, fb.s_pale, s_flash84, s_grandad84,
+SCENES = [s_hook, s_vote, s_kick, s_result, s_sheet, s_stare, fb.s_glove, fb.s_pale, s_flash84, s_grandad84,
           fb.s_hang, fb.s_jump, fb.s_impact, fb.s_stretcher, fb.s_mud, fb.s_today, s_walk, s_night, s_ask, s_hangup,
           s_message, s_choice, s_end]
 assert len(SCENES) == len(LINES)
@@ -523,7 +529,7 @@ def frame(t):
     img = grade(img).convert("RGBA")
     if i in FLASH:
         img = vhs(img, t, 0.8)
-        if not (i == 10 and u > 0.5):
+        if not (i == 9 and u > 0.5):
             vhs_osd(img, t, "MAY 14 1984")
     if i > 0 and t - T < 0.07:
         img = flash(img, 0.3)

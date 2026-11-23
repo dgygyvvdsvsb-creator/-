@@ -36,6 +36,7 @@ LINES = [
     [("VOTE", W), ("BELOW.", G), (FOLLOW, R_), ("FOR", W), ("PART 8.", Y)],
 ]
 PAST = set(range(4, 22)) | {0}          # scenes shown on old VHS tape
+CARD_I, TODAY_I = 4, 22
 UYF = 0                                  # extra top offset for UI under the captions (set by ep7 for TikTok)
 _vf = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"vo/lines_{PLATFORM}.json")
 if os.path.exists(_vf):
@@ -351,11 +352,11 @@ def s_card(t, u, T):
         n = (rng.random((FH // 4, FW // 4)) * 255).astype(np.uint8)
         img = Image.fromarray(n, "L").resize((FW, FH), Image.NEAREST).convert("RGBA")
         return img
-    k = spring(t - T - 0.18 * D(4), 12, 7)
+    k = spring(t - T - 0.18 * D(CARD_I), 12, 7)
     d = ImageDraw.Draw(img)
     if k > 0.15:
         d.text((360, 560), "MAY 1984", font=font(800, max(2, int(110 * min(1.1, k)))), fill=C_Y, anchor="mm", stroke_width=6, stroke_fill=OL)
-    k2 = spring(t - T - 0.45 * D(4), 12, 7)
+    k2 = spring(t - T - 0.45 * D(CARD_I), 12, 7)
     if k2 > 0.05:
         crest(img, 190, 800, 1.3 * min(1.1, k2), "KIN")
         crest(img, 530, 800, 1.3 * min(1.1, k2), "NEW")
@@ -781,7 +782,7 @@ def s_today(t, u, T):
     d.rectangle([390, yb - 80, 450, yb - 46], fill=(170, 174, 186), outline=OL, width=6)
     d.ellipse([290, yb - 56, 320, yb - 26], fill=(150, 154, 166))
     if 0.18 < v < 0.35:
-        impact_lines(img, 340, yb + 10, T + 0.55 * D(22) + 0.2 * 0.45 * D(22), t, 10)
+        impact_lines(img, 340, yb + 10, T + 0.55 * D(TODAY_I) + 0.2 * 0.45 * D(TODAY_I), t, 10)
     shadow(img, 340, 900, 200, 30, 80)
     vignette(img, 0.4)
     return cam(img, 1.0 + 0.05 * v, 360, 760)
