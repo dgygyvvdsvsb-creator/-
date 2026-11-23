@@ -47,7 +47,7 @@ kick(S[2] + 0.18 * D(2), 1.3); whoosh(S[2] + 0.3 * D(2), 1.2); thud(S[2] + 0.5 *
 if not RIGHT: thud(S[2] + 0.5 * D(2), 1.6)
 # 3 result
 if RIGHT:
-    net(S[3]); roar(S[3] + 0.05, 2.0, 1.4)
+    net(S[3] + 0.14 * D(3)); thud(S[3] + 0.14 * D(3), 1.6); roar(S[3] + 0.2 * D(3), 2.0, 1.4)
 else:
     roar(S[3] + 0.05, 2.0, 1.6)
 # 4 pen on the clipboard

@@ -278,6 +278,145 @@ def s_vote(t, u, T):
     return cam(img, 1.04 + 0.04 * u, 360, 800)
 
 
+
+def eyes_gloves(img, push=0.0, t=0.0):
+    """your own gloves at the bottom of the frame (first person). push 0 ready .. 1 flying to the right"""
+    d = ImageDraw.Draw(img)
+    bob = math.sin(t * 3) * 4 * (1 - push)
+    for side in (-1, 1):
+        gx = 360 + side * 230 + push * 300
+        gy = 1080 + bob - push * (420 if side > 0 else 170)
+        s_ = 1.0 + 0.3 * push
+        d.rounded_rectangle([gx - 80 * s_, gy - 90 * s_, gx + 80 * s_, gy + 90 * s_], int(36 * s_), fill=(252, 140, 27), outline=OL, width=8)
+        d.rectangle([gx - 80 * s_, gy + 40 * s_, gx + 80 * s_, gy + 90 * s_], fill=(206, 98, 14), outline=OL, width=6)
+        for f in range(4):
+            fx = gx - 54 * s_ + f * 36 * s_
+            d.line([(fx, gy - 86 * s_), (fx, gy - 40 * s_)], fill=(206, 98, 14), width=6)
+        d.rectangle([gx - 80 * s_, gy + 90 * s_, gx + 80 * s_, gy + 130 * s_], fill=(40, 168, 74), outline=OL, width=6)
+        if side < 0:     # your right wrist is on the left of the frame when you look down at your own hands? no: palms out -> right glove on the right
+            pass
+        else:
+            d.rectangle([gx - 70 * s_, gy + 96 * s_, gx + 70 * s_, gy + 110 * s_], fill=(225, 30, 40))   # red string, right wrist
+
+
+def pov_dive(t, v, T):
+    """first person: you throw yourself right, the world tilts, the ball screams past on the LEFT"""
+    c = Cam(camX=0.0, camH=1.5, hor=520, f=1400)
+    img = backdrop(520, stadium=True)
+    pitch_near(img, c, 0.0)
+    watchers(img, c, t)
+    ground_shadow(img, c, 0.3, 8.3, 0.4)
+    sprite_at(img, c, res(10, mouth="open"), 0.3, 8.3, height_m=1.6)
+    push = ease_out(clamp(v / 0.7))
+    # the ball: from the spot, growing, sweeping past the left edge with a long trail
+    a = clamp((v - 0.1) / 0.75)
+    sx, sy = c.p(0.0, 7.6)
+    bx, by = lerp(sx, 40, a ** 1.6), lerp(sy, 980, a ** 1.6)
+    size = lerp(1.2, 14.0, a ** 2.0)
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(ov)
+    for j in range(7):
+        f0 = max(0.0, a - 0.04 * (j + 1))
+        px, py = lerp(sx, 40, f0 ** 1.6), lerp(sy, 980, f0 ** 1.6)
+        od.line([(px, py), (bx, by)], fill=(255, 255, 255, 120 - j * 14), width=int(size * 6 * (1 - j * 0.1)))
+    img.alpha_composite(ov.filter(ImageFilter.GaussianBlur(6)))
+    draw_ball(img, bx, by + size * 6.5, size)
+    eyes_gloves(img, push, t)
+    slowmo_bars(img, 1.0)
+    vignette(img, 0.4 + 0.3 * push)
+    img = ImageEnhance.Color(img.convert("RGB")).enhance(1 - 0.35 * push).convert("RGBA")
+    return cam(img, 1.35 + 0.2 * push, 360 + 60 * push, 760 - 40 * push, rot=-16 * push)
+
+
+def split_panel(t, v, T):
+    """comic split: top — your face in the air, eyes on the ball; bottom — grass level, the ball spins over the line"""
+    img = Image.new("RGBA", (FW, FH), (0, 0, 0, 255))
+    # --- top panel
+    top = backdrop(520, stadium=True).filter(ImageFilter.GaussianBlur(7))
+    speed_lines(top, t, 380, 520, n=22, a=110, r0=230, r1=620)
+    face = big(hero(pose="reach", gloves=True, mouth="open", look=-1), 24)
+    face = big(hero(pose="reach", gloves=True, mouth="open", look=-1), 20)
+    face = face.crop((0, 0, face.width, 21 * 20)).rotate(-14 + 4 * v, expand=True, resample=Image.NEAREST)
+    top.alpha_composite(face, (int(380 - face.width / 2 + 30 * v), int(430 - face.height / 2)))
+    d = ImageDraw.Draw(top)
+    for k, (x0, y0) in enumerate(((560, 420), (590, 470), (540, 360))):          # sweat flying off
+        yy = y0 - 40 * ((v * 2 + k * 0.3) % 1)
+        d.ellipse([x0 + 30 * v, yy, x0 + 14 + 30 * v, yy + 22], fill=(190, 230, 255), outline=OL, width=2)
+    # --- bottom panel: ground level at the goal line
+    bot = Image.new("RGBA", (FW, FH), (70, 140, 74, 255))
+    bd = ImageDraw.Draw(bot)
+    for y in range(640, FH, 60):
+        bd.rectangle([0, y, FW, y + 30], fill=(64, 132, 68))
+    rng = random.Random(3)
+    for _ in range(260):                                   # grass blades in the foreground
+        x, y = rng.uniform(0, FW), rng.uniform(1000, FH)
+        bd.line([(x, y), (x + rng.uniform(-6, 6), y - rng.uniform(14, 40))], fill=(46, 110, 52), width=4)
+    for x in range(-40, FW, 40):                           # the net behind the line
+        bd.line([(x, 640), (x + 60, 900)], fill=(230, 236, 240), width=3)
+        bd.line([(x + 60, 640), (x, 900)], fill=(230, 236, 240), width=3)
+    bd.rectangle([600, 600, 640, 960], fill=(250, 250, 252), outline=OL, width=5)   # the post
+    bd.rectangle([0, 930, FW, 960], fill=(244, 248, 240))                          # the goal line
+    a = ease_in_out(clamp(v / 0.85))
+    bx, by, sz = lerp(200, 330, a), lerp(1150, 900, a), lerp(9.0, 6.0, a)
+    for j in range(4):
+        bd.arc([bx - 70 - j * 18, by - sz * 6.5 - 70 - j * 18, bx + 70 + j * 18, by - sz * 6.5 + 70 + j * 18], 150 + t * 900 % 360, 210 + t * 900 % 360,
+               fill=(255, 255, 255), width=4)               # spin
+    draw_ball(bot, bx, by, sz)
+    if a > 0.95:
+        impact_lines(bot, bx, by - sz * 6.5, T, T + 0.1, 12)
+    # compose along a diagonal cut
+    mask = Image.new("L", (FW, FH), 0)
+    ImageDraw.Draw(mask).polygon([(0, 0), (FW, 0), (FW, 620), (0, 740)], fill=255)
+    img.paste(bot, (0, 0))
+    img.paste(top, (0, 0), mask)
+    d = ImageDraw.Draw(img)
+    d.line([(0, 740), (FW, 620)], fill=(255, 255, 255), width=14)
+    d.line([(0, 752), (FW, 632)], fill=OL, width=4)
+    slowmo_bars(img, 1.0)
+    return img
+
+
+def net_impact(t, v, t_hit):
+    """from inside the goal: the ball rips into the net right at the lens"""
+    c = Cam(camX=0.0, camH=1.0, hor=600)
+    img = backdrop(600, stadium=True)
+    pitch_persp(img, c, None)
+    s = 1.6 * c.k(3.6) / 31
+    sp = hero(view="back", pose="reach", gloves=True).resize((int(24 * s), int(39 * s)), Image.NEAREST).rotate(90, expand=True, resample=Image.NEAREST)
+    x, y = c.p(1.1, 3.6)                                    # you, on the grass (your right = screen right from in here)
+    img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * s)))
+    img = img.filter(ImageFilter.GaussianBlur(2))
+    hit = 0.35
+    a = clamp(v / hit)
+    bx, by = lerp(420, 330, a), lerp(760, 700, a)
+    bul = 0.0 if v < hit else math.exp(-(v - hit) * 5) * (1 + 0.3 * math.sin((v - hit) * 40))
+    if v < hit:
+        draw_ball(img, bx, by, lerp(1.0, 7.0, a ** 2))
+    net = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    nd = ImageDraw.Draw(net)
+    cell = 52
+
+    def disp(px, py):
+        if bul <= 0:
+            return px, py
+        dx, dy = px - bx, py - by
+        r = math.hypot(dx, dy) + 1e-3
+        f = bul * 110 * math.exp(-(r / 260) ** 2)
+        return px + dx / r * f * 0.5, py + dy / r * f * 0.5
+    for kk in range(-30, 50):
+        p1 = [disp(kk * cell + j * cell, j * cell) for j in range(-2, 32)]
+        p2 = [disp(kk * cell - j * cell, j * cell) for j in range(-2, 32)]
+        nd.line(p1, fill=(250, 250, 255, 170), width=4)
+        nd.line(p2, fill=(250, 250, 255, 170), width=4)
+    img.alpha_composite(net)
+    if v >= hit:
+        draw_ball(img, bx, by - 20, 7.0 + 2.5 * bul)
+        impact_lines(img, bx, by - 60, t_hit, t, 16)
+    img = flash(img, 0.55 * clamp(1 - abs(v - hit) * 8), (255, 40, 40))
+    return cam(img, 1.05 + 0.1 * v, 360, 720, *shake(t, t_hit, .45, 22))
+
+
+
 def s_kick(t, u, T):
     """he strikes it to your LEFT. Wrong vote: you dive right, it goes in. Right vote: you dive left and save."""
     kick = 0.18
@@ -299,6 +438,10 @@ def s_kick(t, u, T):
             impact_lines(img, 330, 1110, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), t, 12)
         shoot_bar(img)
         return cam(img, 1.0, 360, 800, *shake(t, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), .2, 10))
+    if RIGHT and u >= cu1:                  # wrong side: your eyes, then the split panel
+        if u < 0.55:
+            return pov_dive(t, (u - cu1) / (0.55 - cu1), T)
+        return split_panel(t, (u - 0.55) / 0.45, T + 0.55 * D(2))
     img, c = keeper_set(t)
     watchers(img, c, t)
     kp = (u - kick + 0.15) / 0.33
@@ -347,8 +490,10 @@ def s_result(t, u, T):
     x, y = c.p(kx_side, 9.0)
     if RIGHT or u < 0.4:
         img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * s)))
+    if RIGHT and u < 0.4:
+        return net_impact(t, u / 0.4, T + 0.35 * 0.4 * D(3))
     if RIGHT:
-        if u >= 0.5:      # cut: the reserves celebrate, spread out, in front of the stand
+        if u >= 0.7:      # cut: the reserves celebrate, spread out, in front of the stand
             img = backdrop(600, stadium=True)
             c2 = Cam(camX=0.0, camH=1.6, hor=600)
             pitch_persp(img, c2, None)
@@ -360,8 +505,6 @@ def s_result(t, u, T):
             return cam(img, 1.0 + 0.05 * u, 360, 860)
         bx, by = c.p(1.8, 9.9, 0.3)
         draw_ball(img, bx, by + 10, 1.0)
-        impact_lines(img, bx, by, T, t, 12)
-        img = flash(img, 0.25 * clamp(1 - u * 5), (255, 50, 50))
     else:
         if u >= 0.4:
             ground_shadow(img, c, 1.2, 9.0, 0.45)
