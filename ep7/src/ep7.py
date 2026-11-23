@@ -153,7 +153,7 @@ def keeper_sprite(img, pose, rot=0.0, X=0.0, Y=0.0, alpha=1.0):
 
 def dive_XY(ff, side):
     """one arc for every dive: push off, about 0.9 m up, land on the grass inside the post"""
-    return side * 1.75 * ff, max(0.0, 0.95 * math.sin(ff * math.pi) - 0.05)
+    return side * 1.3 * ff, max(0.0, 0.95 * math.sin(ff * math.pi) - 0.05)
 
 
 def draw_dive(img, f, side, ghosts=True, streaks=True):
@@ -241,7 +241,7 @@ def keeper_set(t):
     return img, c
 
 
-RUN_PATH = [(-1.3, 14.0), (-0.9, 12.3), (-0.45, 10.6), (-0.05, 9.3), (0.3, 8.45)]   # diagonal run-up, slight curve
+RUN_PATH = [(-3.2, 15.0), (-2.2, 13.0), (-1.2, 11.0), (-0.3, 9.4), (0.3, 8.45)]   # diagonal run-up from wide left
 
 
 def _path(p):
@@ -331,7 +331,7 @@ def s_cold(t):
     sprite_at(img, c, res(10, pose="strikeF", phase=0.34, mouth="flat"), 0.3, 8.45, height_m=1.6)  # backswing, ball untouched
     ball_at(img, c, 0.0, 7.6, 0.0)
     k = clamp(t / COLD)
-    f = 0.42 + 0.04 * k                                   # frozen high in the dive, drifting a little
+    f = 0.72 + 0.03 * k                                   # frozen in the dive, clear of #10 in the background
     turf(img, 0.5)
     draw_dive(img, f, 1)
     glow_ring(img, *c.p(0.0, 7.6, 0.1), 50 + 6 * math.sin(t * 18), 0.8, (255, 230, 150))   # the ball: not even kicked yet
@@ -354,7 +354,7 @@ def s_hook(t, u, T):
     watchers(img, c, t)
     if t < COLD + REWIND:                       # rewind: everything slides back, #10 reverses to his mark
         r = (t - COLD) / REWIND
-        f = 0.44 * (1 - ease_in_out(r))
+        f = 0.74 * (1 - ease_in_out(r))
         p = 1.0 - ease_in_out(r)
         (X, Z), _ = _path(p)
         ground_shadow(img, c, X, Z, 0.4)
@@ -509,7 +509,7 @@ def net_impact(t, v, t_hit):
     pitch_persp(img, c, None)
     s = 1.6 * c.k(3.6) / 31
     sp = hero(view="back", pose="reach", gloves=True).resize((int(24 * s), int(39 * s)), Image.NEAREST).rotate(-90, expand=True, resample=Image.NEAREST)
-    x, y = c.p(1.3, 3.6)                                    # you, on the grass (your right = screen right from in here)
+    x, y = c.p(0.45, 3.6)                                   # you, on the grass (your right = screen right from in here)
     img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height + 3 * s)))
     img = img.filter(ImageFilter.GaussianBlur(2))
     hit = 0.35
@@ -600,9 +600,9 @@ def strike_insert(t, v, T, t_contact):
     contact = 0.45
     if ph < contact:
         draw_ball(img, 330, 1150, 4.0)
-    else:                                         # calm side-foot: it rolls away low to screen RIGHT (= your LEFT from behind you)
+    else:                                         # calm side-foot: rolls away low to screen LEFT (his right = YOUR left)
         w_ = (ph - contact) / (1 - contact)
-        draw_ball(img, lerp(330, 560, w_), lerp(1150, 1170, w_), lerp(4.0, 4.6, w_))
+        draw_ball(img, lerp(330, 90, w_), lerp(1150, 1170, w_), lerp(4.0, 4.6, w_))
         impact_lines(img, 330, 1110, t_contact, t, 12)
     shoot_bar(img)
     slowmo_bars(img, 1.0 if 0.35 < ph < 0.6 else 0.0)
@@ -655,7 +655,7 @@ def top_down_you(t, v):
     for x in range(0, FW, 36):                                               # the net's shadow behind it
         d.line([(x, 300), (x + 36, 380)], fill=(60, 110, 60), width=3)
     sp = big(hero(pose="reach", gloves=True, blink=0.55 < v < 0.62, mouth="sad"), 15).rotate(-90, expand=True, resample=Image.NEAREST)
-    img.alpha_composite(sp, (int(360 - sp.width / 2 + 60), int(760 - sp.height / 2)))
+    img.alpha_composite(sp, (int(300 - sp.width / 2), int(760 - sp.height / 2)))
     ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
     od = ImageDraw.Draw(ov)
     for k in range(3):                                                       # shadows of the winners running past
@@ -744,9 +744,9 @@ def s_stare(t, u, T):
     ground_shadow(img, c, 1.3, 8.6, 0.4)
     sprite_at(img, c, hero(gloves=True, look=-1, mouth="sad", blink=int(t * 2) % 5 == 0), 1.3, 8.6,
               Y=0.015 * math.sin(t * 2.5), height_m=1.6)
-    ground_shadow(img, c, -1.5, 5.6, 0.4)
+    ground_shadow(img, c, -1.05, 5.8, 0.4)
     wave = int(t * 4) % 2 == 0 and u < 0.6
-    sprite_at(img, c, dixon(pose="celebrate" if wave else "stand", mouth="grin" if u < 0.6 else "flat"), -1.5, 5.6,
+    sprite_at(img, c, dixon(pose="celebrate" if wave else "stand", mouth="grin" if u < 0.6 else "flat"), -1.05, 5.8,
               Y=0.15 * abs(math.sin(t * 7)) if u < 0.6 else 0.0, height_m=1.6)
     turn = ease_in_out(clamp((u - 0.25) / 0.25))
     cb = coach(view="back")
@@ -809,11 +809,11 @@ def s_walk(t, u, T):
     pitch_persp(img, c, Zgoal=9.0)
     goal3d(img, c, 9.0)
     ground_shadow(img, c, 0.3, 9.0, 0.4)
-    sprite_at(img, c, hero(gloves=True, look=-1 if u < 0.7 else 0, mouth="sad", blink=int(t * 2) % 5 == 0), 0.3, 9.0,
-              Y=0.015 * math.sin(t * 2.5), height_m=1.6)
+    sprite_at(img, c, hero(gloves=True, look=1 if u < 0.8 else 0, mouth="sad", blink=int(t * 2) % 5 == 0), 0.3, 9.0,
+              Y=0.04 * abs(math.sin(t * 2.5)), height_m=1.6)
     w = ease_in_out(u)
-    Z = lerp(3.0, 7.2, w)                          # stays in front of the goal line (Z 9)
-    X = lerp(1.4, -5.6, w)                         # toward the touchline, out of frame left
+    Z = lerp(3.2, 6.0, w)                          # stays in front of the goal line (Z 9)
+    X = lerp(0.95, 4.6, w)                         # away to the side, out of frame right — you stay in view
     if True:
         ground_shadow(img, c, X, Z, 0.4)
         sprite_at(img, c, coach(view="back", pose="run", phase=t * 1.2), X, Z, height_m=1.75)
@@ -880,7 +880,9 @@ def phone_ui(img, cx, cy, state, t, k=1.0):
 
 def s_night(t, u, T):
     img = dorm_night(t)
-    paste(img, hero(pose="phone", mouth="flat"), 11, 120, 1200)
+    paste(img, hero(pose="whisper", mouth="flat", blink=int(t * 2) % 6 == 0), 11, 120, 1200 - 6 * abs(math.sin(t * 2)))
+    ImageDraw.Draw(img).rounded_rectangle([120 + 3 * 11, 1200 - 39 * 11 + 13 * 11, 120 + 6 * 11, 1200 - 39 * 11 + 19 * 11], 6,
+                                          fill=(24, 26, 36), outline=OL, width=3)          # the phone at his ear
     phone_ui(img, 400, 820, "calling" if u < 0.6 else "talk", t, 0.9 * spring(t - T - 0.2, 13, 7))
     return cam(img, 1.0 + 0.04 * u, 360, 760)
 

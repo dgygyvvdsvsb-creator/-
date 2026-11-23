@@ -240,14 +240,14 @@ def collision(img, j, impact=0.0, t=0.0):
     """j 0..1: both rise; impact 0..1: contact (knee into Grandad's ribs). Grandad left, #9 right."""
     ground = 1060
     gx = lerp(220, 285, j) - 25 * impact
-    cx = lerp(560, 470, j) + 10 * impact
+    cx = lerp(560, 470, j) - 70 * impact          # his knee drives INTO Grandad's ribs
     gy = ground - 250 * math.sin(j * math.pi / 2) + 60 * impact
     cy = ground - 230 * math.sin(j * math.pi / 2)
     shadow(img, gx, ground + 10, 160 * (1 - 0.4 * j), 30, 90)
     shadow(img, cx, ground + 10, 160 * (1 - 0.4 * j), 30, 90)
-    g = young_grandad(pose="reach", mouth="open" if impact > 0 else "flat", blink=impact > 0.3)
+    g = young_grandad(pose="reach", mouth="sad" if impact > 0 else "flat", blink=impact > 0.05)   # pain, eyes shut
     paste(img, g, 11, gx, gy, rot=-12 + 30 * impact)
-    co = young_coach(pose="kickL", phase=lerp(0.3, 0.92, j), mouth="open" if impact > 0 else "flat")
+    co = young_coach(pose="kickL", phase=lerp(0.3, 0.92, j), mouth="flat")
     paste(img, co, 11, cx, cy, rot=10)
     return (gx + cx) / 2, (gy + cy) / 2 - 230
 
@@ -620,8 +620,8 @@ def s_jump(t, u, T):
 def s_impact(t, u, T):
     img = side_set(t)
     mx, my = collision(img, 1.0, clamp(u / 0.3), t)
-    if u > 0.45:        # gravity: Grandad drops out of the air into the mud, #9 lands on his feet
-        return s_silence(t, (u - 0.45) / 0.55 * 0.75, T)
+    if u > 0.25:        # gravity: Grandad drops out of the air into the mud, #9 lands on his feet
+        return s_silence(t, (u - 0.25) / 0.75 * 0.75, T)
     b = clamp(u / 0.45)
     ball_side(img, mx + 40 + 520 * b, max(430, my - 100 - 80 * b), 2.6)
     impact_lines(img, mx, my + 160, T, t, 16)
@@ -640,7 +640,7 @@ def s_silence(t, u, T):
     g = young_grandad(pose="reach", blink=True, mouth="flat")
     paste(img, g, s, lerp(260, 300, f), lerp(870, ground + 40, f), rot=lerp(18, 90, f))
     co = young_coach(pose="stand" if f > 0.5 else "kickL", phase=0.9)
-    paste(img, co, s, lerp(480, 520, f), lerp(830, ground, f))
+    paste(img, co, s, lerp(400, 520, f), lerp(830, ground, f))
     if 0.55 < u < 0.8:
         mud_splash(img, 300, ground + 10, (u - 0.55) / 0.25, 70)
     b = clamp(u)
@@ -703,8 +703,8 @@ def s_rollin(t, u, T):
 def s_stretcher(t, u, T):
     img = old_stadium(640).copy()
     pitch_persp(img, Cam(camH=1.4, hor=640), None, warm=False)
-    x0 = lerp(-20, 160, u)
-    step = abs(math.sin(t * 4)) * 6
+    x0 = lerp(-120, 220, u)
+    step = abs(math.sin(t * 5)) * 12
     S_ = 10
     by = 990
     sy = by - 17 * S_ - step                  # hand height of the medics ("phone" pose: hands at the chest)
