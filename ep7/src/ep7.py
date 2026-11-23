@@ -125,7 +125,7 @@ def keeper_set(t):
     return img, c
 
 
-RUN_PATH = [(-2.4, 14.2), (-1.6, 12.4), (-0.7, 10.6), (-0.1, 9.3), (0.3, 8.45)]   # diagonal run-up, slight curve
+RUN_PATH = [(-1.3, 14.0), (-0.9, 12.3), (-0.45, 10.6), (-0.05, 9.3), (0.3, 8.45)]   # diagonal run-up, slight curve
 
 
 def _path(p):
@@ -143,6 +143,28 @@ def _path(p):
     return pts[-1], L
 
 
+WATCH = [(-7.0, 23.0, "res", 4), (-5.6, 22.4, "res", 5), (-4.2, 23.4, "res", 7),
+         (4.2, 23.2, "first", 4), (5.6, 22.6, "first", 5), (7.0, 23.4, "first", 6)]
+
+
+def watchers(img, c, t):
+    """both teams on the halfway line: nervous, never frozen — sway, shift weight, hands up / on heads"""
+    for i, (X, Z, team, n) in enumerate(WATCH):
+        sway = 0.18 * math.sin(t * 1.6 + i * 1.7)
+        bob = 0.05 * abs(math.sin(t * 3.1 + i))
+        nerv = math.sin(t * 1.2 + i * 2.3)
+        pose = "celebrate" if nerv > 0.8 else ("ready" if nerv < -0.7 else "stand")
+        goal_t = STARTS[2] + 0.5 * D(2)
+        if t > goal_t:                       # the result lands: winners jump, losers freeze
+            won = (team == "res") == RIGHT
+            pose = "celebrate" if won else "stand"
+            bob = 0.3 * abs(math.sin(t * 7 + i)) if won else 0.0
+            sway = sway * (1.0 if won else 0.2)
+        sp = (res if team == "res" else first)(n, pose=pose, blink=int(t * 3 + i) % 7 == 0, look=-1 if X > 0 else 1)
+        ground_shadow(img, c, X + sway, Z, 0.3)
+        sprite_at(img, c, sp, X + sway, Z, Y=bob, height_m=1.6)
+
+
 def run_progress(t):
     """continuous across lines 0-2: real speed in the hook, slow motion on the vote card, last steps + kick"""
     s1, s2 = STARTS[1], STARTS[2]
@@ -154,14 +176,17 @@ def run_progress(t):
     return min(1.0, 0.80 + 0.20 * ease_out((t - s2) / (kick_t - s2)))
 
 
-def taker_and_ball(img, c, t, run=None, kick=None):
+def taker_and_ball(img, c, t, run=None, kick=None, after=None):
     """their captain #10: diagonal run-up with a real stride (legs cycle with the distance covered), then the kick"""
     p = run_progress(t)
     (X, Z), dist = _path(p)
     stride = 1.5                                   # metres per full leg cycle
     phase = dist / stride
     bob = abs(math.sin(phase * math.pi * 2)) * 0.07
-    if kick is not None:
+    if after is not None:                       # after the strike: foot down, then (goal) arms up
+        pose, ph = ("celebrate" if (RIGHT and after > 0.35) else "stand"), 0.0
+        bob = 0.25 * abs(math.sin(t * 7)) if pose == "celebrate" else 0.0
+    elif kick is not None:
         pose, ph = "strikeF", kick
         bob = 0.1 * math.sin(clamp((kick - 0.55) / 0.45) * math.pi) if kick > 0.55 else 0.0   # little hop after the strike
     elif p >= 0.999:
@@ -177,10 +202,9 @@ def taker_and_ball(img, c, t, run=None, kick=None):
 
 def s_hook(t, u, T):
     img, c = keeper_set(t)
+    watchers(img, c, t)                                     # far first, then the taker, then the ball
     taker_and_ball(img, c, t)
     ball_at(img, c, 0.0, 7.6, 0.0)
-    for k, X in enumerate((-6, -4.5, 4.6, 6.2)):            # both teams watching from the halfway line
-        sprite_at(img, c, (first if k % 2 else res)((4, 5, 7, 6)[k]), X, 24, height_m=1.6)
     paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - abs(math.sin(t * 5)) * 6)
     shoot_bar(img)
     return cam(img, 1.12 + 0.06 * clamp(t / D(0)), 360, 900)
@@ -200,6 +224,7 @@ def arrow_on_grass(img, side, k, col, lab, bg, t, T0):
 
 def s_vote(t, u, T):
     img, c = keeper_set(t)
+    watchers(img, c, t)
     taker_and_ball(img, c, t)
     ball_at(img, c, 0.0, 7.6, 0.0)
     side = 1 if RIGHT else -1          # the hero's right = screen right (we see his back)
@@ -233,7 +258,12 @@ def s_kick(t, u, T):
         shoot_bar(img)
         return cam(img, 1.0, 360, 800, *shake(t, T + (cu0 + contact / 1.1 * (cu1 - cu0)) * D(2), .2, 10))
     img, c = keeper_set(t)
-    taker_and_ball(img, c, t, kick=clamp((u - kick + 0.15) / 0.33) if u > kick - 0.15 else None)
+    watchers(img, c, t)
+    kp = (u - kick + 0.15) / 0.33
+    if kp >= 1.0:
+        taker_and_ball(img, c, t, after=clamp((u - kick - 0.18) / (1 - kick - 0.18)))
+    else:
+        taker_and_ball(img, c, t, kick=clamp(kp) if u > kick - 0.15 else None)
     a = clamp((u - kick) / 0.32)                                  # ~0.7 s ball flight
     dive = ease_out(clamp((u - kick + 0.04) / 0.3))
     side = 1 if RIGHT else -1
