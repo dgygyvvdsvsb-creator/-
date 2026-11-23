@@ -1,8 +1,8 @@
 import os, subprocess, sys
 from multiprocessing import Pool
-import ep6x as ep4
+import ep7 as ep4
 P = os.environ.get("PLATFORM", "tiktok")
-D = sys.argv[3] if len(sys.argv) > 3 else f"f6x_{P}"
+D = sys.argv[3] if len(sys.argv) > 3 else f"f7_{P}"
 os.makedirs(D, exist_ok=True)
 NF = int(ep4.TOTAL * 30)
 

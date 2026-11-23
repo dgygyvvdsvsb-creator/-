@@ -156,7 +156,10 @@ def person(kit=None, skin="light", hair="dark", style="short", pose="stand", vie
         _num(d, ox + 6, oy + 10, kit.number, kit.num_col) if False else None
         # small number on the chest
         g = str(kit.number)
-        _num(d, ox + 9, oy + 10, g[-1], kit.num_col)
+        if len(g) == 1:
+            _num(d, ox + 9, oy + 10, g, kit.num_col)
+        else:                                   # two digits fit across the chest
+            _num(d, ox + 5, oy + 10, g[:2], kit.num_col)
     # arms
     def arm(side, hx, hy):
         sx = 2 if side < 0 else 15
@@ -564,14 +567,14 @@ C_W, C_Y, C_R, C_B, C_G, C_O = (250, 250, 250), (250, 206, 40), (240, 80, 80), (
 C_DIM = (150, 156, 175)
 
 
-def banner(img, ep):
+def banner(img, ep, y=62):
     d = ImageDraw.Draw(img)
     f = font(600, 19)
     a, b = f"EP. {ep} · FROM ZERO TO ", "LEGEND"
     wa, wb = d.textlength(a, font=f), d.textlength(b, font=f)
     x = (FW - wa - wb) / 2
     for txt, col, xx in ((a, (240, 240, 245), x), (b, C_Y, x + wa)):
-        d.text((xx, 62), txt, font=f, fill=col, stroke_width=3, stroke_fill=OL)
+        d.text((xx, y), txt, font=f, fill=col, stroke_width=3, stroke_fill=OL)
 
 
 def caption(img, words, t, wrap=600, y=108, size=50):

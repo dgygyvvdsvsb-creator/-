@@ -1,6 +1,6 @@
 """EP6 (1984) sound effects, no music: training, tape rewind, terrace chants, rain, saves, the collision, silence, stretcher."""
 import numpy as np, wave, sys
-import ep6x as E
+import ep7 as E
 sr = 44100; N = int((E.TOTAL + 0.1) * sr); out = np.zeros(N, np.float32); rng = np.random.default_rng(84)
 S, D = E.STARTS, E.D
 def add(t, sig, g=1.0):
