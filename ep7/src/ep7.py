@@ -118,20 +118,125 @@ def shoot_bar(img, res_win=False):
            fill=(255, 255, 255) if not res_win else (140, 200, 255), anchor="mm")
 
 
-def posts_fg(img):
-    """we stand on the goal line: the two posts frame the shot, so LEFT and RIGHT corners are on screen"""
+class GoalCam(Cam):
+    """camera 6.4 m behind the goal line, 3 m up, looking out over the net: world Z = metres from the goal line"""
+    ZOFF = 6.4
+
+    def p(self, X, Z, Y=0.0):
+        return Cam.p(self, X, Z + self.ZOFF, Y)
+
+    def k(self, Z):
+        return Cam.k(self, Z + self.ZOFF)
+
+
+KC = GoalCam(camX=0.0, camH=3.0, hor=470)
+KZ = 0.5                                         # you stand half a metre off your line
+KX0, FY = KC.p(0.0, KZ)
+KS = 1.6 * KC.k(KZ) / 31                         # sprite scale that makes you 1.6 m at that distance
+
+
+def keeper_sprite(img, pose, rot=0.0, X=0.0, Y=0.0, alpha=1.0):
+    """you, from behind, at world (X, KZ, Y) — same scale as the goal"""
+    sp = hero(view="back", pose=pose, gloves=True)
+    sp = sp.resize((int(24 * KS), int(39 * KS)), Image.NEAREST)
+    if rot:
+        sp = sp.rotate(rot, expand=True, resample=Image.NEAREST)
+    if alpha < 1:
+        sp.putalpha(sp.split()[3].point(lambda a_: int(a_ * alpha)))
+    x, y = KC.p(X, KZ, Y)
+    if rot:
+        img.alpha_composite(sp, (int(x - sp.width / 2), int(y - sp.height / 2 - 0.45 * KC.k(KZ))))
+    else:
+        img.alpha_composite(sp, (int(x - sp.width / 2), int(y - 37 * KS)))
+    return x, y
+
+
+def dive_XY(ff, side):
+    """one arc for every dive: push off, about 0.9 m up, land on the grass inside the post"""
+    return side * 1.75 * ff, max(0.0, 0.95 * math.sin(ff * math.pi) - 0.05)
+
+
+def draw_dive(img, f, side, ghosts=True, streaks=True):
+    """you in the air at progress f (0 push-off .. 1 on the grass), with afterimages along the same arc"""
+    if ghosts and 0.05 < f < 0.98:
+        for g, ga in ((0.18, 0.2), (0.09, 0.35)):
+            fg = f - g
+            if fg <= 0:
+                continue
+            X, Yh = dive_XY(fg, side)
+            keeper_sprite(img, "reach", rot=-side * 85 * min(1.0, fg * 1.6), X=X, Y=Yh, alpha=ga)
+    X, Yh = dive_XY(f, side)
+    pose = "reach" if f > 0.03 else "ready"
+    x, y = keeper_sprite(img, pose, rot=-side * 85 * min(1.0, f * 1.6) if f > 0.03 else 0.0, X=X, Y=Yh)
+    if streaks and 0.05 < f < 0.95:
+        d = ImageDraw.Draw(img)
+        yb = y - 0.45 * KC.k(KZ)
+        for j in range(7):
+            yy = yb - 30 + 10 * j
+            d.line([(x - side * 70, yy), (x - side * (150 + 18 * j), yy)], fill=(255, 255, 255), width=3)
+    return x, y
+
+
+def turf(img, k, seed=9):
+    """turf and dust thrown up at the push-off spot"""
+    if not 0 < k < 1:
+        return
     d = ImageDraw.Draw(img)
-    for x in (34, 686):
-        d.rectangle([x - 22, 380, x + 22, FH], fill=OL)
-        d.rectangle([x - 16, 380, x + 16, FH], fill=(250, 250, 252))
-        d.rectangle([x + 4, 380, x + 16, FH], fill=(220, 224, 232))
-    d.rectangle([0, 360, FW, 402], fill=OL)
-    d.rectangle([0, 366, FW, 396], fill=(250, 250, 252))
+    rng = random.Random(seed)
+    for _ in range(18):
+        ang = rng.uniform(math.pi * 1.05, math.pi * 1.95)
+        r_ = rng.uniform(20, 120) * ease_out(k)
+        px, py = KX0 + math.cos(ang) * r_, FY + math.sin(ang) * r_ * 0.6 + 80 * k * k
+        rr = rng.uniform(3, 7) * (1 - k)
+        d.ellipse([px - rr, py - rr, px + rr, py + rr], fill=(120, 90, 60) if rng.random() < 0.5 else (70, 140, 70))
+
+
+def posts_fg(img, c=None):
+    """the real goal in 3D, between us and you: the net box runs back toward us (roof, back wall, sides), then the
+    white frame with thickness on the goal line"""
+    W, H, DEP, BH = 2.5, 2.0, 1.6, 1.3              # half width, bar height, net depth, height of the back wall
+    ov = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(ov)
+    col = (255, 255, 255, 120)
+    p = KC.p
+    n = 20
+    for i in range(n + 1):                          # back wall (vertical plane at Z = -DEP)
+        X = -W + 2 * W * i / n
+        od.line([p(X, -DEP, 0), p(X, -DEP, BH)], fill=col, width=2)
+    for j in range(7):
+        Yv = BH * j / 6
+        od.line([p(-W, -DEP, Yv), p(W, -DEP, Yv)], fill=col, width=2)
+    for i in range(n + 1):                          # roof: from the bar back and down to the top of the back wall
+        X = -W + 2 * W * i / n
+        od.line([p(X, 0, H), p(X, -DEP, BH)], fill=col, width=2)
+    for j in range(7):
+        a = j / 6
+        od.line([p(-W, -DEP * a, lerp(H, BH, a)), p(W, -DEP * a, lerp(H, BH, a))], fill=col, width=2)
+    for sx in (-W, W):                              # side panels
+        for j in range(7):
+            a = j / 6
+            od.line([p(sx, -DEP * a, 0), p(sx, -DEP * a, lerp(H, BH, a))], fill=col, width=2)
+        for j in range(6):
+            Yv = H * j / 5
+            od.line([p(sx, 0, Yv), p(sx, -DEP, min(Yv, BH))], fill=col, width=2)
+    img.alpha_composite(ov)
+    d = ImageDraw.Draw(img)
+    for a_, b_ in (((-W, -DEP, 0), (-W, -DEP, BH)), ((W, -DEP, 0), (W, -DEP, BH)), ((-W, -DEP, BH), (W, -DEP, BH)),
+                   ((-W, 0, H), (-W, -DEP, BH)), ((W, 0, H), (W, -DEP, BH))):
+        d.line([p(*a_), p(*b_)], fill=(225, 228, 236), width=4)          # the net's support bars
+    pw = int(0.12 * KC.k(0))
+    for a_, b_ in (((-W, 0, 0), (-W, 0, H)), ((W, 0, 0), (W, 0, H)), ((-W, 0, H), (W, 0, H))):
+        d.line([p(*a_), p(*b_)], fill=OL, width=pw + 6)
+    for a_, b_ in (((-W, 0, 0), (-W, 0, H)), ((W, 0, 0), (W, 0, H)), ((-W, 0, H), (W, 0, H))):
+        d.line([p(*a_), p(*b_)], fill=(252, 252, 255), width=pw)
+        x0, y0 = p(*a_); x1, y1 = p(*b_)
+        d.line([(x0 + pw * 0.25, y0), (x1 + pw * 0.25, y1)], fill=(214, 218, 228), width=max(2, pw // 3))   # shading
 
 
 def keeper_set(t):
-    c = Cam(camX=0.0, camH=1.9, hor=520)
-    img = backdrop(520, stadium=True)
+    c = KC
+    img = backdrop(470, stadium=True)
+    pitch_persp(img, Cam(camX=0.0, camH=3.0, hor=470), None)      # grass all the way down to the camera
     pitch_near(img, c, 0.0)
     return img, c
 
@@ -226,31 +331,14 @@ def s_cold(t):
     sprite_at(img, c, res(10, pose="strikeF", phase=0.34, mouth="flat"), 0.3, 8.45, height_m=1.6)  # backswing, ball untouched
     ball_at(img, c, 0.0, 7.6, 0.0)
     k = clamp(t / COLD)
-    f = 0.55 + 0.05 * k                                   # frozen high in the dive, drifting a little
-    kx = 330 + 250 * f
-    ky = 1430 - 300 * math.sin(f * math.pi * 0.85)
-    for g, ga in ((0.22, 0.18), (0.12, 0.32)):           # afterimages
-        fg = f - g
-        ghost = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-85 * min(1.0, fg * 1.4), expand=True, resample=Image.NEAREST)
-        ghost.putalpha(ghost.split()[3].point(lambda a_: int(a_ * ga)))
-        gx, gy = 330 + 250 * fg, 1430 - 300 * math.sin(fg * math.pi * 0.85)
-        img.alpha_composite(ghost, (int(gx - ghost.width / 2), int(gy - ghost.height)))
-    sp = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-85, expand=True, resample=Image.NEAREST)
-    img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
-    dd = ImageDraw.Draw(img)
-    for j in range(9):
-        yy = ky - sp.height * (0.2 + 0.07 * j)
-        dd.line([(kx - 120, yy), (kx - 260 - 30 * j, yy)], fill=(255, 255, 255), width=5)
-    rng = random.Random(9)                                # turf hanging in the air from the push-off
-    for _ in range(18):
-        px, py = rng.uniform(200, 460), rng.uniform(1120, 1300)
-        rr = rng.uniform(5, 11)
-        dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=(120, 90, 60) if rng.random() < 0.5 else (70, 140, 70))
+    f = 0.42 + 0.04 * k                                   # frozen high in the dive, drifting a little
+    turf(img, 0.5)
+    draw_dive(img, f, 1)
     glow_ring(img, *c.p(0.0, 7.6, 0.1), 50 + 6 * math.sin(t * 18), 0.8, (255, 230, 150))   # the ball: not even kicked yet
-    posts_fg(img)
+    posts_fg(img, c)
     slowmo_bars(img, 1.0)
     shoot_bar(img)
-    img = cam(img, 1.08 + 0.04 * k, 400, 820)
+    img = cam(img, 1.02, 360, 820)
     if t > COLD - 0.12:
         img = flash(img, (t - (COLD - 0.12)) / 0.12 * 0.8)
     return img
@@ -266,19 +354,16 @@ def s_hook(t, u, T):
     watchers(img, c, t)
     if t < COLD + REWIND:                       # rewind: everything slides back, #10 reverses to his mark
         r = (t - COLD) / REWIND
-        f = 0.6 * (1 - ease_in_out(r))
+        f = 0.44 * (1 - ease_in_out(r))
         p = 1.0 - ease_in_out(r)
         (X, Z), _ = _path(p)
         ground_shadow(img, c, X, Z, 0.4)
         sprite_at(img, c, res(10, pose="run", phase=-t * 6), X, Z, height_m=1.6)
         ball_at(img, c, 0.0, 7.6, 0.0)
-        kx = 330 + 250 * f
-        ky = 1430 - 300 * math.sin(f * math.pi * 0.85)
-        sp = big(hero(view="back", pose="reach" if f > 0.1 else "ready", gloves=True), 13).rotate(-85 * min(1.0, f * 1.4), expand=True, resample=Image.NEAREST)
-        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
-        posts_fg(img)
+        draw_dive(img, f, 1, ghosts=False, streaks=False)
+        posts_fg(img, c)
         shoot_bar(img)
-        img = cam(img, 1.08, 380, 840)
+        img = cam(img, 1.02, 360, 820)
         img = vhs(img, t, 1.4)
         d = ImageDraw.Draw(img)
         for xo in (0, 46):
@@ -286,16 +371,16 @@ def s_hook(t, u, T):
         return img
     taker_and_ball(img, c, t)
     ball_at(img, c, 0.0, 7.6, 0.0)
-    paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - abs(math.sin(t * 5)) * 6)
-    posts_fg(img)
+    keeper_sprite(img, "ready", Y=0.03 * abs(math.sin(t * 5)))
+    posts_fg(img, c)
     shoot_bar(img)
-    return cam(img, 1.12 + 0.06 * clamp(t / D(0)), 360, 900)
+    return cam(img, 1.02, 360, 820)
 
 
 def arrow_on_grass(img, side, k, col, lab, bg, t, T0):
     d = ImageDraw.Draw(img)
-    x0, y0 = 330 + side * 120, 1060
-    x1, y1 = 360 + side * 230, 820
+    x0, y0 = KC.p(side * 0.5, KZ + 0.6)
+    x1, y1 = KC.p(side * 2.0, KZ, 1.5)
     pts = [(lerp(x0, x1, a), lerp(y0, y1, a) - 120 * math.sin(a * math.pi)) for a in np.linspace(0, k, 24)]
     for j in range(0, len(pts) - 1, 2):
         d.line([pts[j], pts[j + 1]], fill=OL, width=18)
@@ -312,11 +397,11 @@ def s_vote(t, u, T):
     side = 1 if RIGHT else -1          # the hero's right = screen right (we see his back)
     arrow_on_grass(img, side, clamp((u - 0.1) / 0.4), C_B if RIGHT else C_Y, "RIGHT" if RIGHT else "LEFT",
                    (40, 110, 200) if RIGHT else (200, 160, 20), t, T + 0.5 * D(1))
-    paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - 6 * abs(math.sin(t * 5)))
-    posts_fg(img)
+    keeper_sprite(img, "ready", Y=0.03 * abs(math.sin(t * 5)))
+    posts_fg(img, c)
     pill(img, 150, 700, "YOU VOTED", (40, 150, 80), spring(t - T - 0.1, 13, 7), 30)
     shoot_bar(img)
-    return cam(img, 1.04 + 0.04 * u, 360, 800)
+    return cam(img, 1.02 + 0.02 * u, 360, 820)
 
 
 
@@ -542,53 +627,23 @@ def s_kick(t, u, T):
     side = 1 if RIGHT else -1
     dv = clamp((u - GO) / 0.21)                  # one continuous flight, ~0.6 s from push-off to landing
     f = ease_in_out(dv)
-
-    def dive_xy(ff):
-        return 330 + side * 260 * ff, 1430 - 330 * math.sin(ff * math.pi * 0.9)
-    kx, ky = dive_xy(f)
-    landed = dv >= 1.0
-    if dv <= 0:
-        paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430)
-    else:
-        if dv < 0.7:                              # push-off: turf and dust
-            dd = ImageDraw.Draw(img)
-            rng = random.Random(9)
-            for _ in range(22):
-                ang = rng.uniform(math.pi * 0.9, math.pi * 1.9)
-                r_ = rng.uniform(40, 220) * ease_out(dv / 0.7)
-                px, py = 330 + math.cos(ang) * r_ * 1.3, 1300 + math.sin(ang) * r_ * 0.6 + 200 * (dv / 0.7) ** 2
-                rr = rng.uniform(5, 12) * (1 - dv / 0.7)
-                dd.ellipse([px - rr, py - rr, px + rr, py + rr], fill=(120, 90, 60) if rng.random() < 0.5 else (70, 140, 70))
-        if not landed:
-            for g, ga in ((0.16, 0.18), (0.08, 0.32)):  # afterimages along the SAME arc
-                fg = ease_in_out(clamp(dv - g))
-                if fg <= 0:
-                    continue
-                ghost = big(hero(view="back", pose="reach", gloves=True), 13).rotate(-side * 85 * min(1.0, fg * 1.6), expand=True, resample=Image.NEAREST)
-                ghost.putalpha(ghost.split()[3].point(lambda a_: int(a_ * ga)))
-                gx, gy = dive_xy(fg)
-                img.alpha_composite(ghost, (int(gx - ghost.width / 2), int(gy - ghost.height)))
-        sp = big(hero(view="back", pose="reach" if dv > 0.04 else "ready", gloves=True), 13).rotate(-side * 85 * min(1.0, f * 1.6), expand=True, resample=Image.NEAREST)
-        img.alpha_composite(sp, (int(kx - sp.width / 2), int(ky - sp.height)))
-        if 0.05 < dv < 1 and not landed:
-            dd = ImageDraw.Draw(img)
-            for j in range(9):
-                yy = ky - sp.height * (0.2 + 0.07 * j)
-                dd.line([(kx - side * 120, yy), (kx - side * (260 + 30 * j), yy)], fill=(255, 255, 255), width=5)
-    # the ball: after the strike it rolls slowly into the empty LEFT corner (screen left), growing as it comes
+    # the ball: after the strike it rolls slowly into the empty LEFT corner, over the line, into the net
+    ball_world = None
     if u < K1:
         ball_at(img, c, 0.0, 7.6, 0.0)
     else:
         a = clamp((u - K1) / (1 - K1))
-        sx, sy = c.p(0.0, 7.6)
-        ex, ey = 120, 1120
-        bx, by = lerp(sx, ex, a), lerp(sy, ey, a)
-        sz = lerp(1.15, 3.4, a)
-        shadow(img, bx, by + 6, 50 * sz / 1.15, 12 * sz / 1.15, 80)
-        draw_ball(img, bx, by, sz)
-    posts_fg(img)
+        bxw, bzw = lerp(0.0, -2.0, a), lerp(7.6, -0.6, a)
+        ball_world = (bxw, bzw)
+        if bzw > KZ:                             # still in front of you: draw it before you
+            ball_at(img, c, bxw, bzw, 0.0)
+    turf(img, dv / 0.6 if dv < 0.6 else 0.0)
+    draw_dive(img, f if dv > 0 else 0.0, side)
+    if ball_world and ball_world[1] <= KZ:
+        ball_at(img, c, ball_world[0], ball_world[1], 0.0)
+    posts_fg(img, c)
     shoot_bar(img)
-    return cam(img, 1.07, 360, 820, *shake(t, T + (GO + 0.21) * D(2), .25, 10))
+    return cam(img, 1.03, 360, 820, *shake(t, T + (GO + 0.21) * D(2), .25, 8))
 
 
 def top_down_you(t, v):
