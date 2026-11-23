@@ -353,7 +353,8 @@ def s_card(t, u, T):
         return img
     k = spring(t - T - 0.18 * D(4), 12, 7)
     d = ImageDraw.Draw(img)
-    d.text((360, 560), "MAY 1984", font=font(800, max(2, int(110 * min(1.1, k)))), fill=C_Y, anchor="mm", stroke_width=6, stroke_fill=OL)
+    if k > 0.15:
+        d.text((360, 560), "MAY 1984", font=font(800, max(2, int(110 * min(1.1, k)))), fill=C_Y, anchor="mm", stroke_width=6, stroke_fill=OL)
     k2 = spring(t - T - 0.45 * D(4), 12, 7)
     if k2 > 0.05:
         crest(img, 190, 800, 1.3 * min(1.1, k2), "KIN")
@@ -417,7 +418,7 @@ def s_grandad_intro(t, u, T):
         ground_shadow(img, c, X, 5.5, 0.35)
         sprite_at(img, c, kingston(5 if X < 0 else 4, view="back"), X, 5.5, height_m=1.75)
     rain84(img, t, 100)
-    pill(img, 360, 340 + UYF, "KINGSTON · No. 1", (30, 30, 36), spring(t - T - 0.3, 13, 7), 30, fg=KIN)
+    pill(img, 360, 1030, "KINGSTON · No. 1", (30, 30, 36), spring(t - T - 0.3, 13, 7), 30, fg=KIN)
     return cam(img, 1.0 + 0.08 * u, 360, 760)
 
 
@@ -443,7 +444,7 @@ def s_nine(t, u, T):
     d.rectangle([0, 560, FW, FH], fill=(70, 110, 62))
     paste(img, young_coach(mouth="grin" if u > 0.4 else "flat", look=-1, blink=0.2 < u < 0.24), 24, 360, 1430 - abs(math.sin(t * 4)) * 10)
     rain84(img, t, 90)
-    pill(img, 360, 340 + UYF, "NEWCASTLE · No. 9", (30, 30, 36), spring(t - T - 0.3, 13, 7), 30, fg=(140, 180, 255))
+    pill(img, 360, 1030, "NEWCASTLE · No. 9", (30, 30, 36), spring(t - T - 0.3, 13, 7), 30, fg=(140, 180, 255))
     return cam(img, 1.0 + 0.05 * u, 360, 820)
 
 
@@ -611,7 +612,7 @@ def s_jump(t, u, T):
     img = side_set(t)
     j = ease_out(u)
     mx, my = collision(img, j * 0.96, 0.0, t)
-    ball_side(img, lerp(560, mx + 40, u), lerp(300, my - 100, u), 2.6)
+    ball_side(img, lerp(560, mx + 40, u), max(430, lerp(430, my - 100, u)), 2.6)
     rain84(img, t, 120)
     slowmo_bars(img, 1.0)
     return cam(img, 1.0 + 0.1 * u, 380, 800)
@@ -620,8 +621,10 @@ def s_jump(t, u, T):
 def s_impact(t, u, T):
     img = side_set(t)
     mx, my = collision(img, 1.0, clamp(u / 0.3), t)
+    if u > 0.45:        # gravity: Grandad drops out of the air into the mud, #9 lands on his feet
+        return s_silence(t, (u - 0.45) / 0.55 * 0.75, T)
     b = clamp(u / 0.6)
-    ball_side(img, mx + 40 + 220 * b, my - 100 - 160 * math.sin(b * math.pi * 0.6), 2.6)
+    ball_side(img, mx + 40 + 220 * b, max(430, my - 100 - 60 * math.sin(b * math.pi * 0.6)), 2.6)
     impact_lines(img, mx, my + 160, T, t, 16)
     glow_ring(img, mx, my + 160, 80 + 300 * clamp(u * 2), 0.9 * (1 - clamp(u * 2)), (255, 255, 255))
     img = flash(img, 0.85 * clamp(1 - u * 5))
@@ -720,7 +723,7 @@ def s_stretcher(t, u, T):
     rain84(img, t, 120)
     img = ImageEnhance.Color(img.convert("RGB")).enhance(0.55).convert("RGBA")
     d = ImageDraw.Draw(img)                                           # his gloved hand hangs over the side (kept in full colour)
-    hx = sx0 + 250
+    hx = sx0 + 190                                                    # at his shoulder
     d.rectangle([hx, sy, hx + 22, sy + 70], fill=KEEPER_G, outline=OL, width=3)
     d.rectangle([hx - 2, sy + 62, hx + 24, sy + 70], fill=(225, 30, 40))
     d.rounded_rectangle([hx - 14, sy + 70, hx + 36, sy + 128], 10, fill=(255, 140, 20), outline=OL, width=4)
@@ -771,7 +774,8 @@ def s_today(t, u, T):
         x, y = rng.uniform(0, FW), rng.uniform(0, FH)
         d.line([(x, y), (x + rng.uniform(-4, 4), y - rng.uniform(8, 20))], fill=(60, 126, 64) if rng.random() < 0.5 else (90, 160, 86), width=3)
     yb = 880 - 260 * max(0.0, 1 - v * 5) ** 2 if v < 0.2 else 880 - 60 * abs(math.sin((v - 0.2) * 10)) * math.exp(-(v - 0.2) * 9)
-    d.line([(420, -10), (380, yb - 20)], fill=(40, 40, 50), width=8)
+    cord = [(260, yb - 30), (200, yb + 20), (140, yb + 40), (60, yb + 30), (-20, yb + 50)]     # slack on the grass
+    d.line(cord, fill=(40, 40, 50), width=8)
     d.rounded_rectangle([260, yb - 70, 420, yb + 10], 30, fill=(200, 204, 214), outline=OL, width=8)
     d.rectangle([390, yb - 80, 450, yb - 46], fill=(170, 174, 186), outline=OL, width=6)
     d.ellipse([290, yb - 56, 320, yb - 26], fill=(150, 154, 166))

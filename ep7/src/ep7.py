@@ -127,7 +127,7 @@ def keeper_set(t):
 
 def taker_and_ball(img, c, t, run=0.0, kick=None):
     """their captain #10 runs up from the edge of the D to the ball on the spot"""
-    Z = lerp(10.4, 8.25, ease_in_out(run))
+    Z = lerp(13.5, 8.25, ease_in_out(run))
     pose = "run" if run < 1 else "stand"
     ph = t * 2.6
     if kick is not None:
@@ -138,13 +138,12 @@ def taker_and_ball(img, c, t, run=0.0, kick=None):
 
 def s_hook(t, u, T):
     img, c = keeper_set(t)
-    run = clamp(t / D(0)) * 0.55
+    run = clamp(t / D(0)) * 0.6
     taker_and_ball(img, c, t, run)
     ball_at(img, c, 0.0, 7.6, 0.0)
     for k, X in enumerate((-6, -4.5, 4.6, 6.2)):            # both teams watching from the halfway line
-        sprite_at(img, c, (first if k % 2 else res)((4, 5, 7, 9)[k]), X, 24, height_m=1.6)
+        sprite_at(img, c, (first if k % 2 else res)((4, 5, 7, 6)[k]), X, 24, height_m=1.6)
     paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430 - abs(math.sin(t * 5)) * 6)
-    speed_lines(img, t, 330, 1250, n=10, a=50, r0=300, r1=640)
     shoot_bar(img)
     return cam(img, 1.12 + 0.06 * clamp(t / D(0)), 360, 900)
 
@@ -163,13 +162,13 @@ def arrow_on_grass(img, side, k, col, lab, bg, t, T0):
 
 def s_vote(t, u, T):
     img, c = keeper_set(t)
-    taker_and_ball(img, c, t, 0.55 + 0.25 * u)
+    taker_and_ball(img, c, t, 0.6 + 0.4 * u)
     ball_at(img, c, 0.0, 7.6, 0.0)
     side = 1 if RIGHT else -1          # the hero's right = screen right (we see his back)
     arrow_on_grass(img, side, clamp((u - 0.1) / 0.4), C_B if RIGHT else C_Y, "RIGHT" if RIGHT else "LEFT",
                    (40, 110, 200) if RIGHT else (200, 160, 20), t, T + 0.5 * D(1))
     paste(img, hero(view="back", pose="ready", gloves=True), 13, 330, 1430)
-    pill(img, 360, 420 + UY + (60 if TT else 0), "YOU VOTED", (40, 150, 80), spring(t - T - 0.1, 13, 7), 30)
+    pill(img, 150, 700, "YOU VOTED", (40, 150, 80), spring(t - T - 0.1, 13, 7), 30)
     shoot_bar(img)
     return cam(img, 1.04 + 0.04 * u, 360, 800)
 
@@ -224,9 +223,9 @@ def s_result(t, u, T):
         bx, by = c.p(1.8, 9.9, 0.3)
         draw_ball(img, bx, by + 10, 1.0)
         impact_lines(img, bx, by, T, t, 12)
-        for k, (X, Z) in enumerate(((-3.4, 6.2), (3.2, 6.6), (2.0, 5.4))):    # the reserves run off celebrating
+        for k, (X, Z) in enumerate(((0.0, 6.2), (-0.7, 7.2), (0.6, 7.6), (0.3, 5.4))):    # the reserves celebrate
             ground_shadow(img, c, X, Z, 0.35)
-            sprite_at(img, c, res((10, 5, 7)[k], pose="celebrate", mouth="grin"), X + math.sin(t * 6 + k) * 0.1, Z,
+            sprite_at(img, c, res((10, 5, 7, 4)[k], pose="celebrate", mouth="grin"), X + math.sin(t * 6 + k) * 0.1, Z,
                       Y=abs(math.sin(t * 7 + k)) * 0.25, height_m=1.6)
         img = flash(img, 0.25 * clamp(1 - u * 5), (255, 50, 50))
     else:
@@ -237,7 +236,7 @@ def s_result(t, u, T):
         for k, X in enumerate((-2.6, 2.8)):
             sprite_at(img, c, first((4, 6)[k], pose="run", phase=t * 2.4), X, lerp(4.0, 7.5, u), height_m=1.6)
     shoot_bar(img, res_win=RIGHT)
-    return cam(img, 1.1 + 0.05 * u, 360, 640)
+    return cam(img, 1.15 + 0.05 * u, 340, 760)
 
 
 def s_sheet(t, u, T):
@@ -255,22 +254,27 @@ def s_sheet(t, u, T):
     name = "DIXON" if RIGHT else "#0"
     d.text((x + 120, y + 140), name[:int(len(name) * k + 0.999)] if k > 0 else "", font=font(800, 34),
            fill=(40, 90, 200) if RIGHT else (40, 150, 80), anchor="lm")
-    if k > 0 and k < 1:            # the pen moves along the line
+    if u > 0.15:                   # his hand holds the pen and moves along the line
         px = x + 120 + 18 * len(name) * k
-        d.line([(px, y + 150), (px + 70, y + 230)], fill=(30, 30, 40), width=10)
+        d.line([(px, y + 150), (px + 60, y + 220)], fill=(30, 30, 40), width=10)
+        d.rounded_rectangle([px + 40, y + 200, px + 100, y + 260], 14, fill=SKIN["light"][0], outline=OL, width=5)
+        d.rectangle([px + 70, y + 250, px + 140, y + 300], fill=(30, 40, 80), outline=OL, width=5)   # navy sleeve
     return cam(img, 1.0 + 0.05 * u, 360, 860)
 
 
 def s_stare(t, u, T):
-    """the coach's eyes: fixed on your gloves, not on the celebrations"""
+    """over the coach's shoulder: Dixon (blue #2) celebrates on the right — the coach's eyes go to YOU, alone in goal"""
     img, c = fb.present_pitch(t)
-    for k, (X, Z) in enumerate(((-2.0, 6.0), (2.4, 6.5))):
-        sprite_at(img, c, (res if RIGHT else first)((5, 7)[k], pose="celebrate"), X, Z, Y=abs(math.sin(t * 7 + k)) * 0.2, height_m=1.6)
-    sprite_at(img, c, hero(gloves=True, look=1), 0.0, 8.5, height_m=1.6)
-    img = img.filter(ImageFilter.GaussianBlur(3))
-    paste(img, coach(look=1, mouth="flat", blink=False), 26, 380, 1640)
-    # a slow push-in toward his eyes
-    return cam(img, 1.0 + 0.3 * ease_in_out(u), 380, 860)
+    ground_shadow(img, c, 0.4, 7.6, 0.35)
+    sprite_at(img, c, res(10, pose="celebrate", mouth="grin"), 0.4, 7.6, Y=abs(math.sin(t * 7 + 1)) * 0.25, height_m=1.6)
+    ground_shadow(img, c, 1.2, 6.5, 0.4)
+    sprite_at(img, c, dixon(pose="celebrate", mouth="grin"), 1.2, 6.5, Y=abs(math.sin(t * 7)) * 0.25, height_m=1.6)
+    ground_shadow(img, c, -1.2, 8.5, 0.4)
+    sprite_at(img, c, hero(gloves=True, look=0, mouth="sad"), -1.2, 8.5, height_m=1.6)
+    paste(img, coach(view="back"), 24, 170, 1560)
+    k = ease_in_out(clamp((u - 0.15) / 0.85))
+    hx, hy = c.p(-1.2, 8.5, 0.9)
+    return cam(img, 1.0 + 0.9 * k, lerp(360, hx, k), lerp(800, hy, k))
 
 
 def s_flash84(t, u, T):
@@ -293,10 +297,10 @@ def s_walk(t, u, T):
     pitch_persp(img, c, Zgoal=9.0)
     goal3d(img, c, 9.0)
     sprite_at(img, c, hero(gloves=True, look=-1), 0.3, 9.0, height_m=1.6)
-    Z = lerp(4.5, 14.0, ease_in_out(u))
-    X = lerp(-1.4, -3.0, ease_in_out(u))
+    Z = lerp(6.5, 2.2, ease_in_out(u))
+    X = lerp(-1.2, -4.0, ease_in_out(u))
     ground_shadow(img, c, X, Z, 0.4)
-    sprite_at(img, c, coach(view="back", pose="run", phase=t * 1.3), X, Z, height_m=1.75)
+    sprite_at(img, c, coach(pose="run", phase=t * 1.3, look=-1), X, Z, height_m=1.75)
     return cam(img, 1.08 + 0.04 * u, 360, 660)
 
 
@@ -337,14 +341,15 @@ def phone_ui(img, cx, cy, state, t, k=1.0):
     d.rounded_rectangle([cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], 34, fill=(20, 30, 60))
     if k < 0.6:
         return
-    paste(img, grandad(mouth="flat", blink=state == "silent" and int(t * 2) % 4 == 0), 8, cx, cy + 40)
+    paste(img, grandad(mouth="flat", blink=state == "silent" and int(t * 2) % 4 == 0), 8, cx, cy + 120)
     d = ImageDraw.Draw(img)
-    d.text((cx, cy - 250), "GRANDAD", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
-    sub = {"calling": "calling...", "talk": "00:0" + str(int(t * 2) % 10), "silent": "00:1" + str(int(t * 2) % 10),
+    d.text((cx, cy - 275), "GRANDAD", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
+    sec = max(0, int(t - STARTS[18] - 1.2))
+    sub = {"calling": "calling...", "talk": f"00:{sec:02d}", "silent": f"00:{sec:02d}",
            "ended": "CALL ENDED", "msg": "1 NEW MESSAGE"}[state]
-    d.text((cx, cy - 200), sub, font=font(600 if state != "ended" else 800, 26), fill=(180, 190, 220) if state != "ended" else (240, 80, 80), anchor="mm")
+    d.text((cx, cy - 232), sub, font=font(600 if state != "ended" else 800, 26), fill=(180, 190, 220) if state != "ended" else (240, 80, 80), anchor="mm")
     # voice wave: moving while you talk, a flat line in the silence
-    y0 = cy + 120
+    y0 = cy + 170
     pts = []
     for i in range(41):
         x = cx - 150 + i * 7.5
@@ -352,11 +357,9 @@ def phone_ui(img, cx, cy, state, t, k=1.0):
         pts.append((x, y0 + amp))
     if state != "msg":
         d.line(pts, fill=(110, 222, 120) if state == "talk" else (120, 130, 160), width=5)
-    for x, col in ((cx - 90, (230, 60, 60)), (cx + 90, (60, 200, 90))):
-        if state in ("ended", "msg"):
-            continue
-        r = 34 + (6 * math.sin(t * 12) if state == "calling" and x > cx else 0)
-        d.ellipse([x - r, cy + 230 - r, x + r, cy + 230 + r], fill=col, outline=OL, width=5)
+    if state not in ("ended", "msg"):      # outgoing call: one red hang-up button
+        r = 36
+        d.ellipse([cx - r, cy + 250 - r, cx + r, cy + 250 + r], fill=(230, 60, 60), outline=OL, width=5)
 
 
 def s_night(t, u, T):
@@ -369,7 +372,7 @@ def s_night(t, u, T):
 def s_ask(t, u, T):
     img = dorm_night(t).filter(ImageFilter.GaussianBlur(4))
     phone_ui(img, 360, 820, "talk", t)
-    return cam(img, 1.0 + 0.06 * u, 360, 820)
+    return cam(img, 1.0 + 0.15 * ease_in_out(u), 360, 760)
 
 
 def s_hangup(t, u, T):
@@ -410,7 +413,7 @@ def s_message(t, u, T):
     return cam(img, 1.0 + 0.12 * ease_in_out(u), 360, 900)
 
 
-CARDS = [(190, "ASK COACH", "KNOCK ON HIS DOOR", C_Y), (530, "STAY AWAY", "LISTEN TO GRANDAD", C_R)]
+CARDS = [(170, "ASK COACH", "KNOCK ON HIS DOOR", C_Y), (450, "STAY AWAY", "LISTEN TO GRANDAD", C_R)]
 
 
 def choice_cards(img, t, T0):
@@ -420,7 +423,7 @@ def choice_cards(img, t, T0):
         if k < 0.05:
             continue
         hl = 0.5 + 0.5 * math.sin(t * 3.2 + i * math.pi)
-        w, h = 310 * k * (1 + 0.04 * hl), 440 * k * (1 + 0.04 * hl)
+        w, h = 262 * k * (1 + 0.03 * hl), 440 * k * (1 + 0.03 * hl)
         y = 700 + UY * 0.4 - 10 * hl
         d.rounded_rectangle([x - w / 2, y - h / 2, x + w / 2, y + h / 2], 24, fill=(16, 18, 36), outline=c, width=7)
         if k > 0.6:
@@ -436,27 +439,27 @@ def choice_cards(img, t, T0):
                 d.text((x, y - 98), "Stay away", font=font(800, 14), fill=(200, 40, 50), anchor="mm")
                 d.text((x, y - 80), "from him.", font=font(800, 14), fill=(200, 40, 50), anchor="mm")
             d = ImageDraw.Draw(img)
-            d.text((x, y + 110), lab, font=font(800, 36), fill=c, anchor="mm", stroke_width=4, stroke_fill=OL)
-            d.text((x, y + 160), sub, font=font(700, 19), fill=(220, 224, 240), anchor="mm")
+            d.text((x, y + 110), lab, font=font(800, 31), fill=c, anchor="mm", stroke_width=4, stroke_fill=OL)
+            d.text((x, y + 160), sub, font=font(700, 17), fill=(220, 224, 240), anchor="mm")
 
 
 def typing_box(img, t, T0):
     d = ImageDraw.Draw(img)
     y = 980 + UY * 0.4
-    d.rounded_rectangle([90, y, 630, y + 70], 18, fill=(16, 18, 36), outline=(255, 255, 255), width=3)
+    d.rounded_rectangle([50, y, 590, y + 70], 18, fill=(16, 18, 36), outline=(255, 255, 255), width=3)
     words = ["ASK COACH", "STAY AWAY"]
     k = (t - T0) / 1.1
     wi = min(1, int(k))
     w = words[wi]
     n = int(len(w) * clamp((k - wi) * 2)) if k < 2 else len(w)
-    d.text((120, y + 35), w[:n] + ("|" if int(t * 4) % 2 else ""), font=font(800, 30), fill=(255, 255, 255), anchor="lm")
+    d.text((80, y + 35), w[:n] + ("|" if int(t * 4) % 2 else ""), font=font(800, 30), fill=(255, 255, 255), anchor="lm")
 
 
 def s_choice(t, u, T):
     img = fb.choice_bg()
     choice_cards(img, t, T - 0.2)
     typing_box(img, t, T + 0.3)
-    pill(img, 360, 340 + UY, "VOTE BEFORE FRIDAY", (200, 50, 60), spring(t - T - 0.3, 13, 7), 28)
+    pill(img, 310, 340 + UY, "VOTE BEFORE FRIDAY", (200, 50, 60), spring(t - T - 0.3, 13, 7), 28)
     return cam(img, 1.0 + 0.02 * u, 360, 760)
 
 
@@ -466,30 +469,30 @@ def s_end(t, u, T):
     d = ImageDraw.Draw(img)
     k = spring(t - T, 16, 7)
     py = lerp(1400, 420 + UY * 0.4, clamp(k, 0, 1.2))
-    d.rounded_rectangle([60, py, 660, py + 560], 34, fill=(14, 18, 44), outline=C_Y, width=6)
-    paste(img, hero(mouth="smile", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 180, py + 330 - abs(math.sin(t * 3)) * 8)
-    d.text((440, py + 90), "DON'T MISS", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
-    d.text((440, py + 150), "PART 8", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
+    d.rounded_rectangle([24, py, 600, py + 560], 34, fill=(14, 18, 44), outline=C_Y, width=6)
+    paste(img, hero(mouth="smile", gloves=True, blink=int(t * 2.3) % 5 == 0), 9, 140, py + 330 - abs(math.sin(t * 3)) * 8)
+    d.text((390, py + 90), "DON'T MISS", font=font(800, 40), fill=(255, 255, 255), anchor="mm")
+    d.text((390, py + 150), "PART 8", font=font(800, 70), fill=C_Y, anchor="mm", stroke_width=4, stroke_fill=OL)
     tap = T + 0.8
     after = t > tap
     label = ("SUBSCRIBED" if after else "SUBSCRIBE") if PLATFORM == "youtube" else ("FOLLOWING" if after else "+ FOLLOW")
     pul = 1 + (0.05 * math.sin(t * 9) if not after else 0)
-    bw, bh = 330 * pul, 96 * pul
-    bx, by = 440, py + 280
+    bw, bh = 300 * pul, 96 * pul
+    bx, by = 390, py + 280
     d.rounded_rectangle([bx - bw / 2, by - bh / 2, bx + bw / 2, by + bh / 2], 22, fill=(60, 64, 90) if after else (234, 46, 72), outline=OL, width=5)
     d.text((bx, by), label, font=font(800, 36 if after else 40), fill=(255, 255, 255), anchor="mm")
     if after and t < tap + 0.5:
         glow_ring(img, bx, by, 60 + 300 * (t - tap), 0.8 * (1 - (t - tap) / 0.5), C_Y)
     if t < tap + 0.4:
-        gx = lerp(640, bx + 100, ease_in_out((t - T) / 0.8)); gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
+        gx = lerp(600, bx + 100, ease_in_out((t - T) / 0.8)); gy = by - 20 + 60 * (1 - ease_in_out((t - T) / 0.8))
         d.rounded_rectangle([gx - 40, gy, gx + 40, gy + 90], 18, fill=(252, 140, 27), outline=OL, width=5)
         d.rounded_rectangle([gx - 12, gy - 40, gx + 12, gy + 20], 10, fill=(252, 140, 27), outline=OL, width=5)
         d.rectangle([gx - 40, gy + 90, gx + 40, gy + 104], fill=(225, 30, 40), outline=OL, width=3)
-    for x, lab, cc in ((230, "ASK COACH", C_Y), (490, "STAY AWAY", C_R)):
+    for x, lab, cc in ((180, "ASK COACH", C_Y), (440, "STAY AWAY", C_R)):
         hop = 5 * math.sin(t * 5 + x)
-        d.rounded_rectangle([x - 115, py + 400 - hop, x + 115, py + 470 - hop], 18, fill=(30, 36, 76), outline=cc, width=5)
+        d.rounded_rectangle([x - 118, py + 400 - hop, x + 118, py + 470 - hop], 18, fill=(30, 36, 76), outline=cc, width=5)
         d.text((x, py + 435 - hop), lab, font=font(800, 30), fill=cc, anchor="mm")
-    d.text((360, py + 520), "VOTE IN THE COMMENTS", font=font(800, 28), fill=(255, 255, 255), anchor="mm")
+    d.text((312, py + 520), "VOTE IN THE COMMENTS", font=font(800, 28), fill=(255, 255, 255), anchor="mm")
     return img
 
 
@@ -520,7 +523,8 @@ def frame(t):
     img = grade(img).convert("RGBA")
     if i in FLASH:
         img = vhs(img, t, 0.8)
-        vhs_osd(img, t, "MAY 14 1984")
+        if not (i == 10 and u > 0.5):
+            vhs_osd(img, t, "MAY 14 1984")
     if i > 0 and t - T < 0.07:
         img = flash(img, 0.3)
     overlay(img, t, i)
