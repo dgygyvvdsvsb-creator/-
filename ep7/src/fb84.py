@@ -37,6 +37,7 @@ LINES = [
 ]
 PAST = set(range(4, 22)) | {0}          # scenes shown on old VHS tape
 CARD_I, TODAY_I = 4, 22
+BUG_DY = 0
 UYF = 0                                  # extra top offset for UI under the captions (set by ep7 for TikTok)
 _vf = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"vo/lines_{PLATFORM}.json")
 if os.path.exists(_vf):
@@ -143,7 +144,7 @@ def bug84(img, t):
     k, n, _ = score84(t)
     m = match_clock(t) // 60 + 1
     d = ImageDraw.Draw(img)
-    x, y = 40, 248
+    x, y = 40, 248 + BUG_DY
     d.rectangle([x, y, x + 330, y + 46], fill=(10, 10, 16), outline=(230, 230, 230), width=3)
     d.rectangle([x + 6, y + 8, x + 24, y + 38], fill=KIN); d.rectangle([x + 156, y + 8, x + 174, y + 38], fill=NEW)
     f = font(800, 24)
